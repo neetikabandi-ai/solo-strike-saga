@@ -40,7 +40,7 @@ export function Structures() {
               <boxGeometry args={[b.w, b.h, b.d]} />
               <meshStandardMaterial
                 map={b.kind === "rock" ? null : concrete}
-                color={color}
+                color={color ?? "#ffffff"}
                 roughness={0.95}
                 flatShading={b.kind === "rock"}
               />

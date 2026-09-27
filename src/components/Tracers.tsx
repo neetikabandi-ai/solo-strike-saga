@@ -22,8 +22,8 @@ export function Tracers() {
     const dt = Math.min(rawDelta, 0.05);
     const list = runtime.tracers;
     for (let i = list.length - 1; i >= 0; i--) {
-      list[i].life -= dt;
-      if (list[i].life <= 0) list.splice(i, 1);
+      list[i]!.life -= dt;
+      if (list[i]!.life <= 0) list.splice(i, 1);
     }
 
     let n = 0;
@@ -47,8 +47,8 @@ export function Tracers() {
       n++;
     }
     geometry.setDrawRange(0, n * 2);
-    geometry.attributes.position.needsUpdate = true;
-    geometry.attributes.color.needsUpdate = true;
+    geometry.attributes["position"]!.needsUpdate = true;
+    geometry.attributes["color"]!.needsUpdate = true;
   });
 
   return (

@@ -41,7 +41,7 @@ function buildObstacles(): Box[] {
     [10, 70],
   ];
 
-  for (const [cx, cz] of compounds) {
+  for (const [cx, cz] of compounds as [number, number][]) {
     const count = 2 + Math.floor(rnd() * 3);
     for (let i = 0; i < count; i++) {
       const w = 8 + rnd() * 14;

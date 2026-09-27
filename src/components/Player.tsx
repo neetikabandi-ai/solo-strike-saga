@@ -175,7 +175,7 @@ export function Player() {
       addTracer(ORIGIN, HIT, false);
 
       if (bestBot >= 0 && !wallHit) {
-        const bot = runtime.bots[bestBot];
+        const bot = runtime.bots[bestBot]!;
         bot.health -= head ? 62 : 24;
         bot.aware = true;
         store.markHit();

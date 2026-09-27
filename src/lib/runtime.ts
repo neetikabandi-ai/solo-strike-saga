@@ -57,13 +57,13 @@ let tracerId = 0;
 
 export function initRun() {
   const pts = spawnPoints(TOTAL_BOTS + 1);
-  const start = pts[0];
+  const start = pts[0]!;
   runtime.player.set(start.x, 0, start.z);
   runtime.playerAlive = true;
   runtime.tracers = [];
   runtime.bots = pts.slice(1).map((p, i) => ({
     id: i,
-    name: NAMES[i % NAMES.length],
+    name: NAMES[i % NAMES.length]!,
     pos: new THREE.Vector3(p.x, 0, p.z),
     yaw: Math.random() * Math.PI * 2,
     health: 100,

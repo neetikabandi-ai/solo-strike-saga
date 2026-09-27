@@ -13,7 +13,7 @@ export function makeGroundTexture(): THREE.CanvasTexture {
 
   const palette = ["#5d6739", "#77804c", "#8a8452", "#4f5a32", "#948a5c"];
   for (let i = 0; i < 5200; i++) {
-    ctx.fillStyle = palette[(Math.random() * palette.length) | 0];
+    ctx.fillStyle = palette[(Math.random() * palette.length) | 0]!;
     ctx.globalAlpha = 0.25 + Math.random() * 0.4;
     const r = 2 + Math.random() * 14;
     ctx.beginPath();
