@@ -16,6 +16,7 @@ export type Bot = {
   dest: THREE.Vector3;
   moving: boolean;
   aware: boolean;
+  target: number; // id of the bot this bot is fighting, -1 = none
 };
 
 export type Tracer = {
@@ -51,6 +52,7 @@ export const runtime = {
   playerAlive: true,
   tracers: [] as Tracer[],
   muzzle: 0,
+  grace: 0,
 };
 
 let tracerId = 0;
@@ -75,7 +77,9 @@ export function initRun() {
     dest: new THREE.Vector3(p.x, 0, p.z),
     moving: false,
     aware: false,
+    target: -1,
   }));
+  runtime.grace = 10; // bots ignore the player for the first seconds
 }
 
 export function addTracer(

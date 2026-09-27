@@ -29,6 +29,8 @@ export function Bots() {
     const store = useGameStore.getState();
     if (store.phase !== "playing") return;
 
+    if (runtime.grace > 0) runtime.grace -= dt;
+
     const player = runtime.player;
     let aliveBots = 0;
 
@@ -39,15 +41,64 @@ export function Bots() {
       }
       aliveBots++;
 
-      const toPlayer = Math.hypot(player.x - bot.pos.x, player.z - bot.pos.z);
       EYE.set(bot.pos.x, 1.5, bot.pos.z);
+
+      // --- choose an enemy: the player, or another bot ---------------
+      const toPlayer = Math.hypot(player.x - bot.pos.x, player.z - bot.pos.z);
       TARGET.set(player.x, 1.4, player.z);
       RAY.copy(TARGET).sub(EYE);
       const dist = RAY.length();
       RAY.normalize();
-      const clearShot = dist < SIGHT && !rayBlocked(EYE, RAY, dist - 0.6);
+      const playerVisible =
+        runtime.grace <= 0 &&
+        dist < SIGHT &&
+        !rayBlocked(EYE, RAY, dist - 0.6);
 
-      if (clearShot && dist < SIGHT) bot.aware = true;
+      // find / keep a bot target
+      let foe = runtime.bots.find((b) => b.id === bot.target && b.alive);
+      if (!foe) {
+        bot.target = -1;
+        let best = Infinity;
+        for (const other of runtime.bots) {
+          if (other === bot || !other.alive) continue;
+          const d = Math.hypot(other.pos.x - bot.pos.x, other.pos.z - bot.pos.z);
+          if (d < SIGHT && d < best) {
+            TARGET.set(other.pos.x, 1.4, other.pos.z);
+            RAY.copy(TARGET).sub(EYE).normalize();
+            if (!rayBlocked(EYE, RAY, d - 0.6)) {
+              best = d;
+              bot.target = other.id;
+            }
+          }
+        }
+        foe = runtime.bots.find((b) => b.id === bot.target && b.alive);
+      }
+
+      // prefer whichever enemy is closer; player only after grace
+      let foeDist = Infinity;
+      let foeX = 0;
+      let foeZ = 0;
+      if (foe) {
+        foeDist = Math.hypot(foe.pos.x - bot.pos.x, foe.pos.z - bot.pos.z);
+        TARGET.set(foe.pos.x, 1.4, foe.pos.z);
+        RAY.copy(TARGET).sub(EYE);
+        RAY.normalize();
+        if (foeDist >= SIGHT || rayBlocked(EYE, RAY, foeDist - 0.6)) {
+          foe = undefined;
+          bot.target = -1;
+        } else {
+          foeX = foe.pos.x;
+          foeZ = foe.pos.z;
+        }
+      }
+
+      const fightPlayer = playerVisible && (!foe || dist <= foeDist);
+      const engaged = fightPlayer || !!foe;
+      if (engaged) bot.aware = true;
+
+      const enemyX = fightPlayer ? player.x : foeX;
+      const enemyZ = fightPlayer ? player.z : foeZ;
+      const enemyDist = fightPlayer ? dist : foeDist;
 
       // --- pick a destination -------------------------------------
       bot.repath -= dt;
@@ -62,12 +113,12 @@ export function Bots() {
           const ang = Math.random() * Math.PI * 2;
           const r = store.zoneRadius * 0.5 * Math.random();
           bot.dest.set(store.zoneX + Math.cos(ang) * r, 0, store.zoneZ + Math.sin(ang) * r);
-        } else if (bot.aware && toPlayer < SIGHT * 1.4) {
+        } else if (engaged) {
           // close in, but keep a fighting distance and strafe
           const side = Math.random() > 0.5 ? 1 : -1;
-          const ang = Math.atan2(bot.pos.z - player.z, bot.pos.x - player.x) + side * 0.6;
-          const keep = clearShot ? 16 : 8;
-          bot.dest.set(player.x + Math.cos(ang) * keep, 0, player.z + Math.sin(ang) * keep);
+          const ang = Math.atan2(bot.pos.z - enemyZ, bot.pos.x - enemyX) + side * 0.6;
+          const keep = 14 + Math.random() * 6;
+          bot.dest.set(enemyX + Math.cos(ang) * keep, 0, enemyZ + Math.sin(ang) * keep);
         } else {
           const ang = Math.random() * Math.PI * 2;
           const r = 12 + Math.random() * 25;
@@ -88,9 +139,9 @@ export function Bots() {
         moveWithCollision(bot.pos, DIR.x * sp * dt, DIR.z * sp * dt, 0.55);
       }
 
-      // face the player when engaged, otherwise face travel direction
-      const faceX = clearShot ? player.x - bot.pos.x : bot.dest.x - bot.pos.x;
-      const faceZ = clearShot ? player.z - bot.pos.z : bot.dest.z - bot.pos.z;
+      // face the enemy when engaged, otherwise face travel direction
+      const faceX = engaged ? enemyX - bot.pos.x : bot.dest.x - bot.pos.x;
+      const faceZ = engaged ? enemyZ - bot.pos.z : bot.dest.z - bot.pos.z;
       const wantYaw = Math.atan2(faceX, faceZ);
       let diff = wantYaw - bot.yaw;
       while (diff > Math.PI) diff -= Math.PI * 2;
@@ -99,21 +150,31 @@ export function Bots() {
 
       // --- shooting -------------------------------------------------
       bot.fireCd -= dt;
-      if (clearShot && dist < FIRE_RANGE && bot.fireCd <= 0) {
+      if (engaged && enemyDist < FIRE_RANGE && bot.fireCd <= 0) {
         bot.fireCd = bot.burst > 0 ? 0.13 : 1.1 + Math.random() * 1.2;
         if (bot.burst > 0) bot.burst--;
         else bot.burst = 2 + Math.floor(Math.random() * 3);
 
         TARGET.set(
-          player.x + (Math.random() - 0.5) * (1.6 + dist * 0.045),
+          enemyX + (Math.random() - 0.5) * (1.6 + enemyDist * 0.045),
           1.2 + (Math.random() - 0.5) * 1.2,
-          player.z + (Math.random() - 0.5) * (1.6 + dist * 0.045)
+          enemyZ + (Math.random() - 0.5) * (1.6 + enemyDist * 0.045)
         );
         addTracer(EYE, TARGET, true);
 
-        const accuracy = Math.max(0.12, 0.62 - dist * 0.008);
+        const accuracy = Math.max(0.1, 0.5 - enemyDist * 0.008);
         if (Math.random() < accuracy) {
-          store.damage(5 + Math.random() * 7);
+          if (fightPlayer) {
+            store.damage(4 + Math.random() * 6);
+          } else if (foe) {
+            foe.health -= 9 + Math.random() * 8;
+            if (foe.health <= 0) {
+              foe.alive = false;
+              foe.dying = 0;
+              store.pushFeed(`${bot.name} eliminated ${foe.name}`);
+              if (bot.target === foe.id) bot.target = -1;
+            }
+          }
         }
       }
 
