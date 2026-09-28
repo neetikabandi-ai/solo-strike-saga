@@ -3,43 +3,32 @@ import { useRef } from "react";
 import * as THREE from "three";
 import { useGameStore } from "../store/useGameStore";
 
+/** Purple storm wall + white ring showing the next safe circle. */
 export function Zone() {
   const ref = useRef<THREE.Mesh>(null);
   const markerRef = useRef<THREE.Mesh>(null);
 
   useFrame(() => {
-    const { zoneRadius, zoneX, zoneZ, zoneNext } = useGameStore.getState();
+    const { zoneRadius, zoneX, zoneZ, zoneNext, nextX, nextZ } = useGameStore.getState();
     if (ref.current) {
-      ref.current.position.set(zoneX, 40, zoneZ);
-      ref.current.scale.set(zoneRadius, 1, zoneRadius);
+      ref.current.position.set(zoneX, 150, zoneZ);
+      ref.current.scale.set(Math.max(0.1, zoneRadius), 1, Math.max(0.1, zoneRadius));
     }
     if (markerRef.current) {
-      markerRef.current.position.set(zoneX, 0.08, zoneZ);
-      markerRef.current.scale.setScalar(zoneNext);
+      markerRef.current.position.set(nextX, 0.15, nextZ);
+      markerRef.current.scale.setScalar(Math.max(0.1, zoneNext));
     }
   });
 
   return (
     <group>
       <mesh ref={ref}>
-        <cylinderGeometry args={[1, 1, 80, 64, 1, true]} />
-        <meshBasicMaterial
-          color="#6ee7ff"
-          transparent
-          opacity={0.18}
-          side={THREE.DoubleSide}
-          depthWrite={false}
-        />
+        <cylinderGeometry args={[1, 1, 300, 96, 1, true]} />
+        <meshBasicMaterial color="#9b3cf0" transparent opacity={0.3} side={THREE.DoubleSide} depthWrite={false} fog={false} />
       </mesh>
       <mesh ref={markerRef} rotation-x={-Math.PI / 2}>
-        <ringGeometry args={[0.985, 1, 96]} />
-        <meshBasicMaterial
-          color="#ffffff"
-          transparent
-          opacity={0.7}
-          side={THREE.DoubleSide}
-          depthWrite={false}
-        />
+        <ringGeometry args={[0.99, 1, 128]} />
+        <meshBasicMaterial color="#ffffff" transparent opacity={0.8} side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
     </group>
   );
