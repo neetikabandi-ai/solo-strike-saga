@@ -1,95 +1,104 @@
 import { create } from "zustand";
+import type { Weapon, WeaponKind } from "../lib/weapons";
 
-export type Phase = "menu" | "playing" | "dead" | "won";
-
+export type Phase = "menu" | "bus" | "dive" | "playing" | "dead" | "won";
 export type FeedEntry = { id: number; text: string };
 
-const MAG_SIZE = 30;
-const START_RESERVE = 150;
-export const TOTAL_BOTS = 15;
+export const TOTAL_BOTS = 49;
+export const START_ZONE = 820;
+/** Storm damage per second, by storm stage. */
+export const STORM_DPS = [1, 2, 4, 6, 8, 10, 12];
 
-type GameState = {
-  phase: Phase;
+type Data = {
   health: number;
-  mag: number;
-  reserve: number;
+  shield: number;
+  slots: (Weapon | null)[];
+  slot: number;
+  ammo: Record<WeaponKind, number>;
+  potions: { shield: number; med: number };
   reloading: boolean;
+  using: string | null;
   kills: number;
   alive: number;
   zoneRadius: number;
   zoneNext: number;
   zoneX: number;
   zoneZ: number;
+  nextX: number;
+  nextZ: number;
+  stormStage: number;
+  stormLabel: string;
   inZone: boolean;
   feed: FeedEntry[];
   hitMarker: number;
+  prompt: string | null;
+};
+
+type GameState = Data & {
+  phase: Phase;
   runSeed: number;
   start: () => void;
   reset: () => void;
   damage: (n: number) => void;
-  heal: (n: number) => void;
-  setMag: (n: number) => void;
-  setReserve: (n: number) => void;
-  setReloading: (v: boolean) => void;
+  stormDamage: (n: number) => void;
   addKill: (name: string) => void;
-  setAlive: (n: number) => void;
-  setZone: (r: number, next: number, x: number, z: number) => void;
-  setInZone: (v: boolean) => void;
   pushFeed: (text: string) => void;
   markHit: () => void;
 };
 
 let feedId = 0;
 
-const initial = {
-  health: 100,
-  mag: MAG_SIZE,
-  reserve: START_RESERVE,
-  reloading: false,
-  kills: 0,
-  alive: TOTAL_BOTS + 1,
-  zoneRadius: 105,
-  zoneNext: 105,
-  zoneX: 0,
-  zoneZ: 0,
-  inZone: true,
-  feed: [] as FeedEntry[],
-  hitMarker: 0,
-};
-
-export const MAGAZINE_SIZE = MAG_SIZE;
+function initial(): Data {
+  return {
+    health: 100,
+    shield: 0,
+    slots: [{ kind: "ar", rarity: 2, mag: 30 }, null, null],
+    slot: 0,
+    ammo: { ar: 150, smg: 60, shotgun: 12, sniper: 6 },
+    potions: { shield: 2, med: 1 },
+    reloading: false,
+    using: null,
+    kills: 0,
+    alive: TOTAL_BOTS + 1,
+    zoneRadius: START_ZONE,
+    zoneNext: START_ZONE,
+    zoneX: 0,
+    zoneZ: 0,
+    nextX: 0,
+    nextZ: 0,
+    stormStage: 0,
+    stormLabel: "",
+    inZone: true,
+    feed: [],
+    hitMarker: 0,
+    prompt: null,
+  };
+}
 
 export const useGameStore = create<GameState>((set, get) => ({
   phase: "menu",
   runSeed: 0,
-  ...initial,
-  start: () =>
-    set({ ...initial, phase: "playing", runSeed: Date.now() }),
-  reset: () => set({ ...initial, phase: "menu" }),
+  ...initial(),
+  start: () => set({ ...initial(), phase: "bus", runSeed: Date.now() }),
+  reset: () => set({ ...initial(), phase: "menu" }),
   damage: (n) => {
-    const health = Math.max(0, get().health - n);
-    if (health <= 0 && get().phase === "playing") {
-      set({ health: 0, phase: "dead" });
-    } else {
-      set({ health });
-    }
+    const s = get();
+    if (s.phase !== "playing") return;
+    const absorbed = Math.min(s.shield, n);
+    const health = Math.max(0, s.health - (n - absorbed));
+    set({ shield: s.shield - absorbed, health, ...(health <= 0 ? { phase: "dead" as const } : {}) });
   },
-  heal: (n) => set({ health: Math.min(100, get().health + n) }),
-  setMag: (n) => set({ mag: n }),
-  setReserve: (n) => set({ reserve: n }),
-  setReloading: (v) => set({ reloading: v }),
+  stormDamage: (n) => {
+    const s = get();
+    if (s.phase !== "playing") return;
+    const health = Math.max(0, s.health - n);
+    set({ health, ...(health <= 0 ? { phase: "dead" as const } : {}) });
+  },
   addKill: (name) => {
     const kills = get().kills + 1;
-    const alive = Math.max(1, get().alive - 1);
-    set({ kills, alive });
+    set({ kills });
     get().pushFeed(`You eliminated ${name}`);
-    if (alive <= 1 && get().phase === "playing") set({ phase: "won" });
   },
-  setAlive: (n) => set({ alive: n }),
-  setZone: (zoneRadius, zoneNext, zoneX, zoneZ) =>
-    set({ zoneRadius, zoneNext, zoneX, zoneZ }),
-  setInZone: (v) => set({ inZone: v }),
-  pushFeed: (text) =>
-    set((s) => ({ feed: [...s.feed, { id: ++feedId, text }].slice(-4) })),
+  pushFeed: (text) => set((s) => ({ feed: [...s.feed, { id: ++feedId, text }].slice(-5) })),
   markHit: () => set({ hitMarker: Date.now() }),
 }));

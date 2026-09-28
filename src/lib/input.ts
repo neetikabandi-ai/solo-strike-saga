@@ -1,21 +1,16 @@
 export const keys = new Set<string>();
+/** Keys pressed since the last frame (consumed by the player each frame). */
+export const pressed = new Set<string>();
 export const look = { yaw: 0, pitch: -0.12 };
-export const mouse = { firing: false, aiming: false };
+export const mouse = { firing: false, aiming: false, clicked: false };
 export const pointer = { locked: false };
 
-const PREVENT = new Set([
-  "ArrowUp",
-  "ArrowDown",
-  "ArrowLeft",
-  "ArrowRight",
-  "Space",
-  "Tab",
-]);
+const PREVENT = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "Tab"]);
 
-export function installInput(el: HTMLElement, onKey?: (code: string) => void) {
+export function installInput(el: HTMLElement) {
   const onDown = (e: KeyboardEvent) => {
     if (PREVENT.has(e.code)) e.preventDefault();
-    if (!keys.has(e.code)) onKey?.(e.code);
+    if (!e.repeat) pressed.add(e.code);
     keys.add(e.code);
   };
   const onUp = (e: KeyboardEvent) => keys.delete(e.code);
@@ -23,13 +18,15 @@ export function installInput(el: HTMLElement, onKey?: (code: string) => void) {
     keys.clear();
     mouse.firing = false;
   };
-
   const onMouseDown = (e: MouseEvent) => {
     if (!pointer.locked) {
       el.requestPointerLock();
       return;
     }
-    if (e.button === 0) mouse.firing = true;
+    if (e.button === 0) {
+      mouse.firing = true;
+      mouse.clicked = true;
+    }
     if (e.button === 2) mouse.aiming = true;
   };
   const onMouseUp = (e: MouseEvent) => {
@@ -38,10 +35,10 @@ export function installInput(el: HTMLElement, onKey?: (code: string) => void) {
   };
   const onMove = (e: MouseEvent) => {
     if (!pointer.locked) return;
-    const sens = mouse.aiming ? 0.0012 : 0.0022;
+    const sens = mouse.aiming ? 0.0011 : 0.0022;
     look.yaw -= e.movementX * sens;
     look.pitch -= e.movementY * sens;
-    look.pitch = Math.max(-0.9, Math.min(0.65, look.pitch));
+    look.pitch = Math.max(-1.45, Math.min(1.35, look.pitch));
   };
   const onLockChange = () => {
     pointer.locked = document.pointerLockElement === el;
