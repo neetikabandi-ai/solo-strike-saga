@@ -125,7 +125,7 @@ export function HUD() {
       </div>
       <div className="absolute bottom-6 right-6 text-right">
         <div className="text-4xl font-black">
-          {s.mag}<span className="text-lg text-muted-foreground"> / {s.reserve}</span>
+          {s.slots[s.slot]?.mag ?? 0}<span className="text-lg text-muted-foreground"> / {s.slots[s.slot] ? s.ammo[s.slots[s.slot]!.kind] : 0}</span>
         </div>
         {s.reloading && <div className="text-sm">Reloading…</div>}
       </div>

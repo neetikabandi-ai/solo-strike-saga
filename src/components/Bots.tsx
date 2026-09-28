@@ -190,7 +190,7 @@ export function Bots() {
     }
 
     const alive = aliveBots + (store.phase === "playing" ? 1 : 0);
-    if (alive !== store.alive) store.setAlive(alive);
+    if (alive !== store.alive) useGameStore.setState({ alive });
     if (aliveBots === 0 && store.phase === "playing") {
       useGameStore.setState({ phase: "won", alive: 1 });
     }
