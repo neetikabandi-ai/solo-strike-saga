@@ -216,3 +216,17 @@ export function raySphere(origin: THREE.Vector3, dir: THREE.Vector3, center: THR
   const t = -b - Math.sqrt(disc);
   return t >= 0 ? t : null;
 }
+
+/** Launch pads: two near every named location. */
+export const PADS: { x: number; z: number }[] = POIS.flatMap((p, i) =>
+  [0, 1].map((k) => {
+    const a = i * 1.7 + k * Math.PI;
+    return findFree(clampMap(p.x + Math.cos(a) * 55), clampMap(p.z + Math.sin(a) * 55), 2);
+  }),
+);
+
+/** Vehicle parking spots: one per named location plus a few in the wild. */
+export const VEHICLE_SPOTS: { x: number; z: number; yaw: number }[] = [
+  ...POIS.map((p, i) => ({ ...findFree(clampMap(p.x - 35), clampMap(p.z + 30 + i), 2.2), yaw: i })),
+  ...[[-300, 300], [300, -300], [0, -500], [500, 200], [-500, -150]].map(([x, z], i) => ({ ...findFree(x!, z!, 2.2), yaw: i * 2 })),
+];
