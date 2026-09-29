@@ -3,7 +3,7 @@ import { useRef } from "react";
 import * as THREE from "three";
 import { keys, look, mouse, pressed } from "../lib/input";
 import { addTracer, BUS_ALT, busPos, hurtBot, runtime, type Chest } from "../lib/runtime";
-import { clampMap, findFree, moveWithCollision, rayBlocked, raySphere } from "../lib/world";
+import { clampMap, collides, findFree, PADS, moveWithCollision, rayBlocked, raySphere } from "../lib/world";
 import { RARITY, rollWeapon, WEAPONS } from "../lib/weapons";
 import { STORM_DPS, useGameStore } from "../store/useGameStore";
 
@@ -118,8 +118,15 @@ export function Player() {
         set({ phase: "playing" });
       }
       EYE.set(pos.x, height.current + 1.6, pos.z);
-      cam.position.copy(EYE);
-      cam.lookAt(EYE.x + AIM.x, EYE.y + AIM.y, EYE.z + AIM.z);
+      if (glide) {
+        // third person while gliding
+        cam.position.copy(EYE).addScaledVector(AIM, -9);
+        cam.position.y += 3;
+        cam.lookAt(EYE.x + AIM.x * 6, EYE.y + AIM.y * 6, EYE.z + AIM.z * 6);
+      } else {
+        cam.position.copy(EYE);
+        cam.lookAt(EYE.x + AIM.x, EYE.y + AIM.y, EYE.z + AIM.z);
+      }
       setFov(glide ? 80 : 90);
       pressed.clear();
       mouse.clicked = false;
@@ -130,6 +137,62 @@ export function Player() {
       pressed.clear();
       mouse.clicked = false;
       return;
+    }
+
+    // ---- vehicles ------------------------------------------------
+    if (runtime.driving >= 0) {
+      const v = runtime.vehicles[runtime.driving]!;
+      const max = k.has("ShiftLeft") ? 38 : 26;
+      if (fwd > 0) v.speed = Math.min(max, v.speed + 18 * dt);
+      else if (fwd < 0) v.speed = Math.max(-9, v.speed - 22 * dt);
+      else v.speed *= Math.exp(-1.2 * dt);
+      if (k.has("Space")) v.speed *= Math.exp(-4 * dt);
+      const steer = Math.min(1, Math.abs(v.speed) / 6) * Math.sign(v.speed);
+      v.yaw -= strafe * 1.9 * steer * dt;
+      const nx = clampMap(v.x - Math.sin(v.yaw) * v.speed * dt);
+      const nz = clampMap(v.z - Math.cos(v.yaw) * v.speed * dt);
+      if (collides(nx, nz, 1.6)) v.speed *= -0.3;
+      else {
+        v.x = nx;
+        v.z = nz;
+      }
+      pos.set(v.x, 0, v.z);
+      height.current = 0;
+      runtime.view.ads = false;
+      // chase camera, mouse can orbit
+      const cy = v.yaw + (look.yaw - v.yaw) * 0;
+      look.yaw += (v.yaw - look.yaw) * (1 - Math.exp(-3 * dt));
+      cam.position.set(v.x + Math.sin(look.yaw) * 9, 4.2, v.z + Math.cos(look.yaw) * 9);
+      cam.lookAt(v.x - Math.sin(cy) * 4, 1.4, v.z - Math.cos(cy) * 4);
+      setFov(80 + Math.abs(v.speed) * 0.3);
+      const pr = "Press E to exit vehicle";
+      if (store.prompt !== pr) set({ prompt: pr });
+      if (pressed.has("KeyE")) {
+        v.speed = 0;
+        runtime.driving = -1;
+        const spot = findFree(v.x + Math.cos(v.yaw) * 2.5, v.z - Math.sin(v.yaw) * 2.5, 0.6);
+        pos.set(spot.x, 0, spot.z);
+        set({ prompt: null });
+      }
+      pressed.clear();
+      mouse.clicked = false;
+      return;
+    }
+
+    // ---- launch pads ---------------------------------------------
+    if (height.current < 0.5) {
+      for (const pad of PADS) {
+        if (Math.abs(pad.x - pos.x) < 1.6 && Math.abs(pad.z - pos.z) < 1.6) {
+          height.current = 70;
+          vy.current = 0;
+          set({ phase: "dive", prompt: null, reloading: false, using: null });
+          reloadT.current = 0;
+          useT.current = 0;
+          pressed.clear();
+          mouse.clicked = false;
+          return;
+        }
+      }
     }
 
     // ---- on foot -------------------------------------------------
@@ -207,8 +270,16 @@ export function Player() {
         near = c;
       }
     }
-    const prompt = near ? "Press F to open chest" : null;
+    let nearCar = -1;
+    for (const v of runtime.vehicles) if (Math.hypot(v.x - pos.x, v.z - pos.z) < 3.5) nearCar = v.id;
+    const prompt = near ? "Press F to open chest" : nearCar >= 0 ? "Press E to drive" : null;
     if (prompt !== store.prompt) set({ prompt });
+    if (nearCar >= 0 && pressed.has("KeyE")) {
+      cancelActions();
+      runtime.driving = nearCar;
+      look.yaw = runtime.vehicles[nearCar]!.yaw;
+      set({ prompt: null });
+    }
     if (near && pressed.has("KeyF")) {
       near.opened = true;
       runtime.chestVersion++;
