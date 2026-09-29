@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { runtime, initRun } from "../lib/runtime";
-import { MAP_HALF } from "../lib/world";
+import { MAP_HALF, PADS } from "../lib/world";
+import { RARITY, WEAPONS } from "../lib/weapons";
 import { useGameStore } from "../store/useGameStore";
 
 export function startMatch() {
@@ -118,9 +119,47 @@ export function HUD() {
           OUTSIDE THE ZONE — MOVE!
         </div>
       )}
-      <div className="absolute bottom-6 left-1/2 w-80 -translate-x-1/2">
-        <div className="h-3 overflow-hidden rounded bg-card/70">
-          <div className="h-full bg-foreground transition-all" style={{ width: `${s.health}%` }} />
+      {(s.prompt || s.using) && (
+        <div className="absolute left-1/2 top-[58%] -translate-x-1/2 rounded bg-card/85 px-4 py-1.5 text-sm font-bold">
+          {s.using ?? s.prompt}
+        </div>
+      )}
+      <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2">
+        <div className="w-80 space-y-1">
+          <div className="h-2.5 overflow-hidden rounded bg-card/70">
+            <div className="h-full bg-sky-400 transition-all" style={{ width: `${s.shield}%` }} />
+          </div>
+          <div className="h-3 overflow-hidden rounded bg-card/70">
+            <div className="h-full bg-green-500 transition-all" style={{ width: `${s.health}%` }} />
+          </div>
+          <div className="flex justify-between text-xs"><span>🛡 {s.shield}</span><span>❤ {Math.round(s.health)}</span></div>
+        </div>
+        <div className="flex gap-1.5">
+          {s.slots.map((w, i) => (
+            <div
+              key={i}
+              className={`relative flex h-16 w-20 flex-col justify-end rounded border-2 bg-card/80 p-1 text-[10px] leading-tight ${i === s.slot ? "-translate-y-1 ring-2 ring-foreground" : ""}`}
+              style={{ borderColor: w ? RARITY[w.rarity]!.color : "hsl(var(--border))" }}
+            >
+              <span className="absolute left-1 top-0.5 text-muted-foreground">{i + 1}</span>
+              {w ? (
+                <>
+                  <span className="font-bold" style={{ color: RARITY[w.rarity]!.color }}>{WEAPONS[w.kind].name}</span>
+                  <span>{w.mag}/{s.ammo[w.kind]}</span>
+                </>
+              ) : (
+                <span className="text-muted-foreground">Empty</span>
+              )}
+            </div>
+          ))}
+          <div className="relative flex h-16 w-16 flex-col items-center justify-center rounded border-2 border-sky-400 bg-card/80 text-xs">
+            <span className="absolute left-1 top-0.5 text-[10px] text-muted-foreground">4</span>
+            <span className="text-xl">🧪</span>x{s.potions.shield}
+          </div>
+          <div className="relative flex h-16 w-16 flex-col items-center justify-center rounded border-2 border-green-500 bg-card/80 text-xs">
+            <span className="absolute left-1 top-0.5 text-[10px] text-muted-foreground">5</span>
+            <span className="text-xl">➕</span>x{s.potions.med}
+          </div>
         </div>
       </div>
       <div className="absolute bottom-6 right-6 text-right">
