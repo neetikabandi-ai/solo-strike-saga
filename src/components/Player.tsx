@@ -275,12 +275,13 @@ export function Player() {
           let best = -1;
           let head = false;
           for (const bot of runtime.bots) {
+            if (!bot.landed && runtime.clock >= bot.landAt) bot.landed = true;
             if (!bot.alive || !bot.landed) continue;
             if (Math.abs(bot.pos.x - pos.x) > bestT || Math.abs(bot.pos.z - pos.z) > bestT) continue;
-            HEAD.set(bot.pos.x, 1.55, bot.pos.z);
-            BODY.set(bot.pos.x, 0.9, bot.pos.z);
-            const th = raySphere(EYE, DIR, HEAD, 0.3);
-            const tb = raySphere(EYE, DIR, BODY, 0.5);
+            HEAD.set(bot.pos.x, 1.6, bot.pos.z);
+            BODY.set(bot.pos.x, 0.95, bot.pos.z);
+            const th = raySphere(EYE, DIR, HEAD, 0.45);
+            const tb = raySphere(EYE, DIR, BODY, 0.75);
             const t = th ?? tb;
             if (t !== null && t < bestT) {
               bestT = t;
@@ -289,7 +290,7 @@ export function Player() {
             }
           }
           const reach = best >= 0 ? bestT : spec.range * 2;
-          const blocked = rayBlocked(EYE, DIR, reach);
+          const blocked = rayBlocked(EYE, DIR, Math.max(0, reach - 0.6));
           HIT.copy(EYE).addScaledVector(DIR, reach);
           if (p < 3) addTracer(MUZ, HIT, false);
           if (best >= 0 && !blocked) {
