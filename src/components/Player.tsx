@@ -290,7 +290,7 @@ export function Player() {
             }
           }
           const reach = best >= 0 ? bestT : spec.range * 2;
-          const blocked = rayBlocked(EYE, DIR, reach);
+          const blocked = rayBlocked(EYE, DIR, Math.max(0, reach - 0.6));
           HIT.copy(EYE).addScaledVector(DIR, reach);
           if (p < 3) addTracer(MUZ, HIT, false);
           if (best >= 0 && !blocked) {
