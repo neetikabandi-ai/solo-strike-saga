@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { CHEST_SPOTS, clampMap, findFree, POIS } from "./world";
+import { CHEST_SPOTS, clampMap, findFree, POIS, VEHICLE_SPOTS } from "./world";
 import { TOTAL_BOTS } from "../store/useGameStore";
 
 export type Bot = {
@@ -24,6 +24,7 @@ export type Bot = {
 };
 
 export type Tracer = { id: number; from: THREE.Vector3; to: THREE.Vector3; life: number; hostile: boolean };
+export type Vehicle = { id: number; x: number; z: number; yaw: number; speed: number };
 export type Chest = { id: number; x: number; z: number; rot: number; opened: boolean };
 
 const A = ["Jonesy", "Peely", "Fishstick", "Midas", "Raven", "Drift", "Ramirez", "Banshee", "Lynx", "Meowscles", "Brutus", "Skye", "Ruckus", "Aura", "Crystal", "Calamity"];
@@ -45,6 +46,8 @@ export const runtime = {
   chests: [] as Chest[],
   chestVersion: 0,
   view: { bob: 0, ads: false },
+  vehicles: [] as Vehicle[],
+  driving: -1,
   bus: { sx: 0, sz: 0, ex: 0, ez: 0, dur: 30, yaw: 0 },
 };
 
@@ -80,6 +83,8 @@ export function initRun() {
   runtime.altitude = BUS_ALT;
   runtime.chests = CHEST_SPOTS.map((c, i) => ({ id: i, x: c.x, z: c.z, rot: c.rot, opened: false }));
   runtime.chestVersion++;
+  runtime.vehicles = VEHICLE_SPOTS.map((v, i) => ({ id: i, x: v.x, z: v.z, yaw: v.yaw, speed: 0 }));
+  runtime.driving = -1;
 
   runtime.bots = Array.from({ length: TOTAL_BOTS }, (_, i) => {
     const jump = b.dur * (0.08 + Math.random() * 0.85);

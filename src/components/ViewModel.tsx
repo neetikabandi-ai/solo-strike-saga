@@ -17,7 +17,7 @@ export function ViewModel() {
   useFrame(({ camera }, raw) => {
     const dt = Math.min(raw, 0.05);
     if (!root.current || !gun.current) return;
-    root.current.visible = phase === "playing" && !!weapon;
+    root.current.visible = phase === "playing" && !!weapon && runtime.driving < 0;
     root.current.position.copy(camera.position);
     root.current.quaternion.copy(camera.quaternion);
     const ads = runtime.view.ads;
