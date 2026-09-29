@@ -27,6 +27,10 @@ function Minimap() {
         ctx.beginPath();
         ctx.arc(m(st.zoneX), m(st.zoneZ), (st.zoneRadius / (MAP_HALF * 2)) * S, 0, Math.PI * 2);
         ctx.stroke();
+        ctx.fillStyle = "#facc15";
+        for (const pd of PADS) ctx.fillRect(m(pd.x) - 1.5, m(pd.z) - 1.5, 3, 3);
+        ctx.fillStyle = "#f97316";
+        for (const v of runtime.vehicles) ctx.fillRect(m(v.x) - 2, m(v.z) - 2, 4, 4);
         const p = runtime.player;
         ctx.save();
         ctx.translate(m(p.x), m(p.z));
@@ -66,6 +70,8 @@ export function HUD() {
           <ul className="mt-4 space-y-1 text-left text-sm text-muted-foreground">
             <li>WASD move · Shift sprint · C crouch · Space jump</li>
             <li>Mouse look · Left click fire · Right click aim · R reload</li>
+            <li>1-3 weapons · 4 shield potion · 5 medkit · F open chest</li>
+            <li>E enter/exit car · Yellow pads launch you into the sky</li>
           </ul>
           <button
             onClick={startMatch}
