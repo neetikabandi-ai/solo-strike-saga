@@ -45,7 +45,7 @@ export function Bots() {
 
       // --- choose an enemy: the player, or another bot ---------------
       const toPlayer = Math.hypot(player.x - bot.pos.x, player.z - bot.pos.z);
-      TARGET.set(player.x, 1.4, player.z);
+      TARGET.set(player.x, player.y + 1.4, player.z);
       RAY.copy(TARGET).sub(EYE);
       const dist = RAY.length();
       RAY.normalize();

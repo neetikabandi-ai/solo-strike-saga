@@ -3,7 +3,7 @@ import { useRef } from "react";
 import * as THREE from "three";
 import { keys, look, mouse, pressed } from "../lib/input";
 import { addTracer, BUS_ALT, busPos, hurtBot, runtime, type Chest } from "../lib/runtime";
-import { clampMap, collides, findFree, PADS, moveWithCollision, rayBlocked, raySphere } from "../lib/world";
+import { clampMap, collides, findFree, groundAt, PADS, moveWithCollision, rayBlocked, raySphere } from "../lib/world";
 import { RARITY, rollWeapon, WEAPONS } from "../lib/weapons";
 import { STORM_DPS, useGameStore } from "../store/useGameStore";
 
@@ -106,12 +106,15 @@ export function Player() {
         pos.z = clampMap(pos.z + MOVE.z);
       }
       height.current -= fall * dt;
+      const floorY = groundAt(pos.x, pos.z, height.current + 200);
       runtime.altitude = Math.max(0, height.current);
-      if (height.current <= 0) {
-        height.current = 0;
+      if (height.current <= floorY) {
+        height.current = floorY;
         vy.current = 0;
-        const spot = findFree(pos.x, pos.z, 0.7);
-        pos.set(spot.x, 0, spot.z);
+        if (floorY <= 0) {
+          const spot = findFree(pos.x, pos.z, 0.7);
+          pos.set(spot.x, 0, spot.z);
+        } else pos.y = floorY;
         runtime.grace = 4;
         runtime.gliding = false;
         look.pitch = -0.05;
@@ -206,14 +209,27 @@ export function Player() {
     const moving = MOVE.lengthSq() > 0;
     if (moving) {
       MOVE.normalize().multiplyScalar(speed * dt);
-      moveWithCollision(pos, MOVE.x, MOVE.z, 0.45);
+      moveWithCollision(pos, MOVE.x, MOVE.z, 0.45, height.current);
     }
-    if (k.has("Space") && height.current <= 0.001 && vy.current <= 0) vy.current = 7.2;
+    let floor = groundAt(pos.x, pos.z, height.current);
+    const onGround = height.current <= floor + 0.001;
+    if (k.has("Space") && onGround && vy.current <= 0) vy.current = 7.2;
     vy.current -= GRAVITY * dt;
-    height.current = Math.max(0, height.current + vy.current * dt);
-    if (height.current === 0) vy.current = 0;
+    height.current += vy.current * dt;
+    // ceiling bump
+    if (vy.current > 0 && collides(pos.x, pos.z, 0.3, height.current)) {
+      height.current -= vy.current * dt;
+      vy.current = 0;
+    }
+    floor = groundAt(pos.x, pos.z, Math.max(height.current, floor));
+    if (height.current <= floor) {
+      height.current = floor;
+      vy.current = 0;
+    }
+    pos.y = height.current;
+    runtime.altitude = height.current;
 
-    if (moving && height.current === 0) bobT.current += dt * (sprinting ? 13 : 9);
+    if (moving && height.current <= floor + 0.001) bobT.current += dt * (sprinting ? 13 : 9);
     runtime.view.bob = Math.sin(bobT.current) * (moving ? (sprinting ? 0.03 : 0.015) : 0);
     runtime.view.ads = aiming;
 
