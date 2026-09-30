@@ -2,8 +2,8 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { runtime } from "../lib/runtime";
-import { MAP_SIZE, OBSTACLES, TREES } from "../lib/world";
-import { makeConcreteTexture, makeGroundTexture } from "../lib/textures";
+import { LAMPS, MAP_SIZE, NEON, OBSTACLES, TREES } from "../lib/world";
+import { makeConcreteTexture, makeGroundTexture, makeWindowTexture } from "../lib/textures";
 
 const M = new THREE.Matrix4();
 const Q = new THREE.Quaternion();
@@ -24,12 +24,12 @@ export function Ground() {
     <group>
       <mesh rotation-x={-Math.PI / 2} receiveShadow>
         <planeGeometry args={[MAP_SIZE + 40, MAP_SIZE + 40]} />
-        <meshStandardMaterial map={tex} color="#a6e36b" roughness={1} />
+        <meshStandardMaterial map={tex} color="#9aa0b4" roughness={0.55} metalness={0.2} />
       </mesh>
       {/* sea around the island */}
       <mesh rotation-x={-Math.PI / 2} position-y={-0.6}>
         <planeGeometry args={[6000, 6000]} />
-        <meshStandardMaterial color="#3aa0d8" roughness={0.3} metalness={0.1} />
+        <meshStandardMaterial color="#0b1330" roughness={0.15} metalness={0.6} />
       </mesh>
     </group>
   );
@@ -37,49 +37,77 @@ export function Ground() {
 
 export function Structures() {
   const concrete = useMemo(() => makeConcreteTexture(), []);
-  useEffect(() => () => concrete.dispose(), [concrete]);
-  const solids = useMemo(() => OBSTACLES.filter((b) => b.kind !== "rock"), []);
+  const windows = useMemo(() => makeWindowTexture(), []);
+  useEffect(() => () => { concrete.dispose(); windows.dispose(); }, [concrete, windows]);
+  const solids = useMemo(() => OBSTACLES.filter((b) => b.kind !== "rock" && b.kind !== "tower"), []);
+  const towers = useMemo(() => OBSTACLES.filter((b) => b.kind === "tower"), []);
   const rocks = useMemo(() => OBSTACLES.filter((b) => b.kind === "rock"), []);
-  const roofs = useMemo(() => OBSTACLES.filter((b) => b.kind === "building"), []);
   const solidRef = useRef<THREE.InstancedMesh>(null);
-  const roofRef = useRef<THREE.InstancedMesh>(null);
+  const towerRef = useRef<THREE.InstancedMesh>(null);
   const rockRef = useRef<THREE.InstancedMesh>(null);
+  const neonRef = useRef<THREE.InstancedMesh>(null);
+  const lampRef = useRef<THREE.InstancedMesh>(null);
+  const bulbRef = useRef<THREE.InstancedMesh>(null);
 
   useLayoutEffect(() => {
     solids.forEach((b, i) => {
-      M.compose(P.set(b.x, b.h / 2, b.z), Q.identity(), S.set(b.w, b.h, b.d));
+      M.compose(P.set(b.x, b.y0 + b.h / 2, b.z), Q.identity(), S.set(b.w, b.h, b.d));
       solidRef.current?.setMatrixAt(i, M);
       solidRef.current?.setColorAt(i, C.set(b.color));
     });
-    roofs.forEach((b, i) => {
-      M.compose(P.set(b.x, b.h + 0.2, b.z), Q.identity(), S.set(b.w + 0.8, 0.4, b.d + 0.8));
-      roofRef.current?.setMatrixAt(i, M);
+    towers.forEach((b, i) => {
+      M.compose(P.set(b.x, b.y0 + b.h / 2, b.z), Q.identity(), S.set(b.w, b.h, b.d));
+      towerRef.current?.setMatrixAt(i, M);
+      towerRef.current?.setColorAt(i, C.set(b.color).offsetHSL(0, 0, 0.1));
     });
     rocks.forEach((b, i) => {
       M.compose(P.set(b.x, b.h * 0.35, b.z), Q.setFromAxisAngle(UP, i), S.set(b.w * 0.6, b.h * 0.7, b.d * 0.6));
       rockRef.current?.setMatrixAt(i, M);
     });
-    for (const r of [solidRef, roofRef, rockRef]) {
+    NEON.forEach((n, i) => {
+      M.compose(P.set(n.x, n.y, n.z), Q.identity(), S.set(n.w, n.h, n.d));
+      neonRef.current?.setMatrixAt(i, M);
+      neonRef.current?.setColorAt(i, C.set(n.color).multiplyScalar(2.2));
+    });
+    LAMPS.forEach((l, i) => {
+      M.compose(P.set(l.x, 3.5, l.z), Q.identity(), S.set(1, 1, 1));
+      lampRef.current?.setMatrixAt(i, M);
+      M.compose(P.set(l.x, 7.1, l.z), Q.identity(), S.set(1, 1, 1));
+      bulbRef.current?.setMatrixAt(i, M);
+    });
+    for (const r of [solidRef, towerRef, rockRef, neonRef, lampRef, bulbRef]) {
       if (!r.current) continue;
       r.current.instanceMatrix.needsUpdate = true;
       if (r.current.instanceColor) r.current.instanceColor.needsUpdate = true;
       r.current.computeBoundingSphere();
     }
-  }, [solids, roofs, rocks]);
+  }, [solids, towers, rocks]);
 
   return (
     <group>
       <instancedMesh ref={solidRef} args={[undefined, undefined, solids.length]} castShadow receiveShadow>
         <boxGeometry />
-        <meshStandardMaterial map={concrete} roughness={0.9} />
+        <meshStandardMaterial map={concrete} roughness={0.8} />
       </instancedMesh>
-      <instancedMesh ref={roofRef} args={[undefined, undefined, roofs.length]} castShadow>
+      <instancedMesh ref={towerRef} args={[undefined, undefined, towers.length]} castShadow receiveShadow>
         <boxGeometry />
-        <meshStandardMaterial color="#7a5c4a" roughness={1} />
+        <meshStandardMaterial map={windows} emissiveMap={windows} emissive="#ffd9a0" emissiveIntensity={0.9} roughness={0.4} metalness={0.4} />
+      </instancedMesh>
+      <instancedMesh ref={neonRef} args={[undefined, undefined, NEON.length]}>
+        <boxGeometry />
+        <meshBasicMaterial toneMapped={false} />
+      </instancedMesh>
+      <instancedMesh ref={lampRef} args={[undefined, undefined, LAMPS.length]}>
+        <cylinderGeometry args={[0.08, 0.12, 7, 6]} />
+        <meshStandardMaterial color="#222733" />
+      </instancedMesh>
+      <instancedMesh ref={bulbRef} args={[undefined, undefined, LAMPS.length]}>
+        <sphereGeometry args={[0.3, 8, 8]} />
+        <meshBasicMaterial color={[3, 2.4, 1.6]} toneMapped={false} />
       </instancedMesh>
       <instancedMesh ref={rockRef} args={[undefined, undefined, rocks.length]} castShadow receiveShadow>
         <dodecahedronGeometry args={[1, 0]} />
-        <meshStandardMaterial color="#8a8f96" roughness={1} flatShading />
+        <meshStandardMaterial color="#565b66" roughness={1} flatShading />
       </instancedMesh>
       <Trees />
       <Chests />
@@ -96,7 +124,7 @@ function Trees() {
       trunk.current?.setMatrixAt(i, M);
       M.compose(P.set(t.x, 4.2 * t.s, t.z), Q.setFromAxisAngle(UP, i), S.setScalar(t.s));
       leaves.current?.setMatrixAt(i, M);
-      leaves.current?.setColorAt(i, C.set(i % 3 === 0 ? "#3f9b3a" : i % 3 === 1 ? "#58b847" : "#2f8a45"));
+      leaves.current?.setColorAt(i, C.set(i % 3 === 0 ? "#1f4d3a" : i % 3 === 1 ? "#24583f" : "#173d33"));
     });
     for (const r of [trunk, leaves]) {
       if (!r.current) continue;

@@ -8,10 +8,10 @@ export function makeGroundTexture(): THREE.CanvasTexture {
   c.height = size;
   const ctx = c.getContext("2d")!;
 
-  ctx.fillStyle = "#6b7343";
+  ctx.fillStyle = "#2a2d36";
   ctx.fillRect(0, 0, size, size);
 
-  const palette = ["#5d6739", "#77804c", "#8a8452", "#4f5a32", "#948a5c"];
+  const palette = ["#23262e", "#30333d", "#262a33", "#1d2027", "#353945"];
   for (let i = 0; i < 5200; i++) {
     ctx.fillStyle = palette[(Math.random() * palette.length) | 0]!;
     ctx.globalAlpha = 0.25 + Math.random() * 0.4;
@@ -29,23 +29,14 @@ export function makeGroundTexture(): THREE.CanvasTexture {
     ctx.fill();
   }
 
-  // Faint dirt tracks
-  ctx.globalAlpha = 0.18;
-  ctx.strokeStyle = "#9a8c63";
-  ctx.lineWidth = 16;
-  for (let i = 0; i < 5; i++) {
-    ctx.beginPath();
-    ctx.moveTo(Math.random() * size, 0);
-    ctx.bezierCurveTo(
-      Math.random() * size,
-      size * 0.33,
-      Math.random() * size,
-      size * 0.66,
-      Math.random() * size,
-      size
-    );
-    ctx.stroke();
-  }
+  // tile seams + lane dashes
+  ctx.globalAlpha = 0.5;
+  ctx.strokeStyle = "#15171d";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(0, 0, size, size);
+  ctx.globalAlpha = 0.6;
+  ctx.fillStyle = "#d9c56b";
+  for (let y = 20; y < size; y += 80) ctx.fillRect(size / 2 - 3, y, 6, 40);
   ctx.globalAlpha = 1;
 
   const tex = new THREE.CanvasTexture(c);
@@ -87,6 +78,32 @@ export function makeConcreteTexture(): THREE.CanvasTexture {
   }
   ctx.globalAlpha = 1;
 
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/** Night skyscraper facade: dark glass with randomly lit windows. */
+export function makeWindowTexture(): THREE.CanvasTexture {
+  const w = 128;
+  const h = 512;
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext("2d")!;
+  ctx.fillStyle = "#07090f";
+  ctx.fillRect(0, 0, w, h);
+  const lit = ["#ffd9a0", "#9be7ff", "#ffffff", "#ffb3f0"];
+  for (let y = 4; y < h; y += 12) {
+    for (let x = 4; x < w; x += 10) {
+      const on = Math.random() < 0.38;
+      ctx.fillStyle = on ? lit[(Math.random() * lit.length) | 0]! : "#141a26";
+      ctx.globalAlpha = on ? 0.6 + Math.random() * 0.4 : 1;
+      ctx.fillRect(x, y, 6, 7);
+    }
+  }
+  ctx.globalAlpha = 1;
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.colorSpace = THREE.SRGBColorSpace;
