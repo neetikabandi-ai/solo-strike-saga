@@ -325,53 +325,43 @@ export function clampMap(v: number) {
 }
 
 /** Slide-along-walls resolution, axis by axis. */
-export function moveWithCollision(pos: THREE.Vector3, dx: number, dz: number, radius = 0.6) {
-  if (dx !== 0 && !collides(pos.x + dx, pos.z, radius)) pos.x += dx;
-  if (dz !== 0 && !collides(pos.x, pos.z + dz, radius)) pos.z += dz;
+export function moveWithCollision(pos: THREE.Vector3, dx: number, dz: number, radius = 0.6, y = 0) {
+  if (dx !== 0 && !collides(pos.x + dx, pos.z, radius, y)) pos.x += dx;
+  if (dz !== 0 && !collides(pos.x, pos.z + dz, radius, y)) pos.z += dz;
   pos.x = clampMap(pos.x);
   pos.z = clampMap(pos.z);
 }
 
 /** Ray vs axis-aligned boxes — used for bullets and line of sight. */
+function rayBox(origin: THREE.Vector3, dir: THREE.Vector3, maxDist: number, minX: number, maxX: number, minY: number, maxY: number, minZ: number, maxZ: number) {
+  let t0 = 0;
+  let t1 = maxDist;
+  const o = [origin.x, origin.y, origin.z];
+  const d = [dir.x, dir.y, dir.z];
+  const mn = [minX, minY, minZ];
+  const mx = [maxX, maxY, maxZ];
+  for (let i = 0; i < 3; i++) {
+    if (Math.abs(d[i]!) < 1e-6) {
+      if (o[i]! < mn[i]! || o[i]! > mx[i]!) return false;
+    } else {
+      let ta = (mn[i]! - o[i]!) / d[i]!;
+      let tb = (mx[i]! - o[i]!) / d[i]!;
+      if (ta > tb) [ta, tb] = [tb, ta];
+      t0 = Math.max(t0, ta);
+      t1 = Math.min(t1, tb);
+      if (t0 > t1) return false;
+    }
+  }
+  return t1 >= 0 && t0 <= maxDist;
+}
+
+/** Ray vs boxes (broadphase per building) — bullets and line of sight. */
 export function rayBlocked(origin: THREE.Vector3, dir: THREE.Vector3, maxDist: number): boolean {
-  for (const b of OBSTACLES) {
-    const minX = b.x - b.w / 2;
-    const maxX = b.x + b.w / 2;
-    const minZ = b.z - b.d / 2;
-    const maxZ = b.z + b.d / 2;
-    let t0 = 0;
-    let t1 = maxDist;
-    if (Math.abs(dir.x) < 1e-6) {
-      if (origin.x < minX || origin.x > maxX) continue;
-    } else {
-      let ta = (minX - origin.x) / dir.x;
-      let tb = (maxX - origin.x) / dir.x;
-      if (ta > tb) [ta, tb] = [tb, ta];
-      t0 = Math.max(t0, ta);
-      t1 = Math.min(t1, tb);
-      if (t0 > t1) continue;
+  for (const g of GROUPS) {
+    if (!rayBox(origin, dir, maxDist, g.minX, g.maxX, 0, g.top, g.minZ, g.maxZ)) continue;
+    for (const b of g.items) {
+      if (rayBox(origin, dir, maxDist, b.x - b.w / 2, b.x + b.w / 2, b.y0, b.y0 + b.h, b.z - b.d / 2, b.z + b.d / 2)) return true;
     }
-    if (Math.abs(dir.y) < 1e-6) {
-      if (origin.y < 0 || origin.y > b.h) continue;
-    } else {
-      let ta = (0 - origin.y) / dir.y;
-      let tb = (b.h - origin.y) / dir.y;
-      if (ta > tb) [ta, tb] = [tb, ta];
-      t0 = Math.max(t0, ta);
-      t1 = Math.min(t1, tb);
-      if (t0 > t1) continue;
-    }
-    if (Math.abs(dir.z) < 1e-6) {
-      if (origin.z < minZ || origin.z > maxZ) continue;
-    } else {
-      let ta = (minZ - origin.z) / dir.z;
-      let tb = (maxZ - origin.z) / dir.z;
-      if (ta > tb) [ta, tb] = [tb, ta];
-      t0 = Math.max(t0, ta);
-      t1 = Math.min(t1, tb);
-      if (t0 > t1) continue;
-    }
-    if (t1 >= 0 && t0 <= maxDist) return true;
   }
   return false;
 }
