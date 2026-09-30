@@ -20,7 +20,7 @@ function Minimap() {
         const S = c.width;
         const m = (v: number) => ((v + MAP_HALF) / (MAP_HALF * 2)) * S;
         const st = useGameStore.getState();
-        ctx.fillStyle = "#4b5a33";
+        ctx.fillStyle = "#141827";
         ctx.fillRect(0, 0, S, S);
         ctx.strokeStyle = "#7dd3fc";
         ctx.lineWidth = 2;
