@@ -217,7 +217,10 @@ export function Player() {
     vy.current -= GRAVITY * dt;
     height.current += vy.current * dt;
     // ceiling bump
-    if (vy.current > 0 && collides(pos.x, pos.z, 0.3, height.current + 0.2 - 0.65 + 0.001) && collides(pos.x, pos.z, 0.3, height.current)) vy.current = 0;
+    if (vy.current > 0 && collides(pos.x, pos.z, 0.3, height.current)) {
+      height.current -= vy.current * dt;
+      vy.current = 0;
+    }
     floor = groundAt(pos.x, pos.z, Math.max(height.current, floor));
     if (height.current <= floor) {
       height.current = floor;
