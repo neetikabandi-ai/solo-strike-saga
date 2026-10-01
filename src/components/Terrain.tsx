@@ -85,7 +85,7 @@ export function Structures() {
 
   return (
     <group>
-      <instancedMesh ref={solidRef} args={[undefined, undefined, solids.length]} castShadow receiveShadow>
+      <instancedMesh ref={solidRef} args={[undefined, undefined, solids.length]} receiveShadow>
         <boxGeometry />
         <meshStandardMaterial map={concrete} roughness={0.8} />
       </instancedMesh>
@@ -147,7 +147,7 @@ function Trees() {
   );
 }
 
-const MAX_CHESTS = 400;
+const MAX_CHESTS = 3200;
 
 function Chests() {
   const body = useRef<THREE.InstancedMesh>(null);
@@ -165,9 +165,9 @@ function Chests() {
       const c = list[i];
       const show = !!c && !c.opened;
       Q.setFromAxisAngle(UP, c?.rot ?? 0);
-      M.compose(P.set(c?.x ?? 0, 0.4, c?.z ?? 0), Q, S.set(show ? 1.3 : 0, show ? 0.8 : 0, show ? 0.8 : 0));
+      M.compose(P.set(c?.x ?? 0, (c?.y ?? 0) + 0.4, c?.z ?? 0), Q, S.set(show ? 1.3 : 0, show ? 0.8 : 0, show ? 0.8 : 0));
       body.current.setMatrixAt(i, M);
-      M.compose(P.set(c?.x ?? 0, 0.9, c?.z ?? 0), Q, S.set(show ? 1.36 : 0, show ? 0.25 : 0, show ? 0.86 : 0));
+      M.compose(P.set(c?.x ?? 0, (c?.y ?? 0) + 0.9, c?.z ?? 0), Q, S.set(show ? 1.36 : 0, show ? 0.25 : 0, show ? 0.86 : 0));
       lid.current.setMatrixAt(i, M);
     }
     body.current.count = lid.current.count = Math.min(MAX_CHESTS, list.length);
