@@ -242,11 +242,11 @@ function build() {
       const top = k * 4;
       if (k === 1) {
         deck(px, pz, S, S, top, nc);
-        const [dx, dz] = [[1, 0], [0, 1], [-1, 0], [0, -1]][dirIdx]!;
+        const [dx, dz] = ([[1, 0], [0, 1], [-1, 0], [0, -1]] as const)[dirIdx]!;
         stairs(px + dx * S / 2, pz + dz * S / 2, dx, dz, top, 0);
       } else {
         dirIdx = (dirIdx + (rnd() < 0.5 ? 1 : 3)) % 4;
-        const [dx, dz] = [[1, 0], [0, 1], [-1, 0], [0, -1]][dirIdx]!;
+        const [dx, dz] = ([[1, 0], [0, 1], [-1, 0], [0, -1]] as const)[dirIdx]!;
         const nx = px + dx * (S + len), nz = pz + dz * (S + len);
         deck(nx, nz, S, S, top, nc);
         // stair descends from new deck back to previous one
