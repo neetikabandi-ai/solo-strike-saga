@@ -25,7 +25,7 @@ export type Bot = {
 
 export type Tracer = { id: number; from: THREE.Vector3; to: THREE.Vector3; life: number; hostile: boolean };
 export type Vehicle = { id: number; x: number; z: number; yaw: number; speed: number };
-export type Chest = { id: number; x: number; z: number; rot: number; opened: boolean };
+export type Chest = { id: number; x: number; z: number; y: number; rot: number; opened: boolean };
 
 const A = ["Jonesy", "Peely", "Fishstick", "Midas", "Raven", "Drift", "Ramirez", "Banshee", "Lynx", "Meowscles", "Brutus", "Skye", "Ruckus", "Aura", "Crystal", "Calamity"];
 const B = ["TTV", "YT", "Pro", "OG", "", "", "xX", "Sweaty", "Default", "Cranky"];
@@ -81,7 +81,7 @@ export function initRun() {
   runtime.tracers = [];
   runtime.player.set(b.sx, 0, b.sz);
   runtime.altitude = BUS_ALT;
-  runtime.chests = CHEST_SPOTS.map((c, i) => ({ id: i, x: c.x, z: c.z, rot: c.rot, opened: false }));
+  runtime.chests = CHEST_SPOTS.map((c, i) => ({ id: i, x: c.x, z: c.z, y: c.y, rot: c.rot, opened: false }));
   runtime.chestVersion++;
   runtime.vehicles = VEHICLE_SPOTS.map((v, i) => ({ id: i, x: v.x, z: v.z, yaw: v.yaw, speed: 0 }));
   runtime.driving = -1;
@@ -112,7 +112,7 @@ export function initRun() {
       name,
       pos: new THREE.Vector3(spot.x, 0, spot.z),
       yaw: Math.random() * Math.PI * 2,
-      health: 100,
+      health: 150,
       shield: Math.random() < 0.6 ? 50 : 0,
       alive: true,
       dying: 0,

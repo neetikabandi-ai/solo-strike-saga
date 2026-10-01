@@ -279,7 +279,7 @@ export function Player() {
     let near: Chest | null = null;
     let nd = 2.8;
     for (const c of runtime.chests) {
-      if (c.opened) continue;
+      if (c.opened || Math.abs(c.y - height.current) > 2) continue;
       const d = Math.hypot(c.x - pos.x, c.z - pos.z);
       if (d < nd) {
         nd = d;

@@ -4,7 +4,7 @@ import type { Weapon, WeaponKind } from "../lib/weapons";
 export type Phase = "menu" | "bus" | "dive" | "playing" | "dead" | "won";
 export type FeedEntry = { id: number; text: string };
 
-export const TOTAL_BOTS = 49;
+export const TOTAL_BOTS = 99;
 export const START_ZONE = 820;
 /** Storm damage per second, by storm stage. */
 export const STORM_DPS = [1, 2, 4, 6, 8, 10, 12];
