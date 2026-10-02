@@ -2,7 +2,7 @@ import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import * as THREE from "three";
 import { keys, look, mouse, pressed } from "../lib/input";
-import { addTracer, BUS_ALT, busPos, hurtBot, runtime, type Chest } from "../lib/runtime";
+import { addTracer, BUS_ALT, busPos, carUnder, hurtBot, runtime, trainCars, TRAIN_ROOF, updateTrain, type Chest } from "../lib/runtime";
 import { clampMap, collides, findFree, groundAt, PADS, moveWithCollision, rayBlocked, raySphere } from "../lib/world";
 import { RARITY, rollWeapon, WEAPONS } from "../lib/weapons";
 import { STORM_DPS, useGameStore } from "../store/useGameStore";
@@ -45,6 +45,25 @@ export function Player() {
     const set = useGameStore.setState;
 
     if (phase === "bus" || phase === "dive" || phase === "playing") runtime.clock += dt;
+    // train position before/after this frame (carry riders)
+    const prevCars = trainCars.map((c) => ({ ...c }));
+    updateTrain(phase === "menu" ? clock.elapsedTime : runtime.clock);
+
+    // ---- teleport menu request -----------------------------------
+    if (runtime.teleport && (phase === "playing" || phase === "dive")) {
+      const t = runtime.teleport;
+      runtime.teleport = null;
+      runtime.driving = -1;
+      pos.set(t.x, 0, t.z);
+      height.current = Math.max(groundAt(t.x, t.z, 400), 0) + 45;
+      vy.current = 0;
+      reloadT.current = 0;
+      useT.current = 0;
+      set({ phase: "dive", prompt: null, reloading: false, using: null });
+      pressed.clear();
+      mouse.clicked = false;
+      return;
+    }
 
     const cp = Math.cos(look.pitch);
     AIM.set(-Math.sin(look.yaw) * cp, Math.sin(look.pitch), -Math.cos(look.yaw) * cp).normalize();
@@ -222,6 +241,21 @@ export function Player() {
       vy.current = 0;
     }
     floor = groundAt(pos.x, pos.z, Math.max(height.current, floor));
+    // riding the maglev roof
+    const car = carUnder(pos.x, pos.z);
+    if (car >= 0 && height.current >= TRAIN_ROOF - 0.8 && vy.current <= 0) {
+      floor = Math.max(floor, TRAIN_ROOF);
+      const pc = prevCars[car]!, nc = trainCars[car]!;
+      if (height.current <= TRAIN_ROOF + 0.05) {
+        // rotate + translate with the car
+        const dyaw = nc.yaw - pc.yaw;
+        const rx = pos.x - pc.x, rz = pos.z - pc.z;
+        const cs = Math.cos(dyaw), sn = Math.sin(dyaw);
+        pos.x = nc.x + rx * cs + rz * sn;
+        pos.z = nc.z - rx * sn + rz * cs;
+        look.yaw += dyaw;
+      }
+    }
     if (height.current <= floor) {
       height.current = floor;
       vy.current = 0;
