@@ -1,7 +1,8 @@
 import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import * as THREE from "three";
-import { runtime } from "../lib/runtime";
+import { CAR_H, CAR_LEN, CAR_W, runtime, trainCars, TRAIN_CARS } from "../lib/runtime";
+import { TRAIN_Y } from "../lib/world";
 import { PADS, VEHICLE_SPOTS } from "../lib/world";
 import { useGameStore } from "../store/useGameStore";
 
@@ -107,6 +108,48 @@ export function GliderAvatar() {
           <cylinderGeometry args={[0.02, 0.02, 2, 4]} />
           <meshBasicMaterial color="#222" />
         </mesh>
+      ))}
+    </group>
+  );
+}
+
+export function MaglevTrain() {
+  const refs = useRef<(THREE.Group | null)[]>([]);
+  useFrame(() => {
+    for (let i = 0; i < TRAIN_CARS; i++) {
+      const g = refs.current[i];
+      const c = trainCars[i]!;
+      if (g) {
+        g.position.set(c.x, TRAIN_Y, c.z);
+        g.rotation.y = c.yaw;
+      }
+    }
+  });
+  return (
+    <group>
+      {Array.from({ length: TRAIN_CARS }, (_, i) => (
+        <group key={i} ref={(el) => { refs.current[i] = el; }}>
+          <mesh position={[0, CAR_H / 2 + 0.3, 0]}>
+            <boxGeometry args={[CAR_W, CAR_H - 0.3, CAR_LEN]} />
+            <meshStandardMaterial color={i === 0 ? "#1e2235" : "#161a28"} metalness={0.6} roughness={0.35} />
+          </mesh>
+          <mesh position={[0, 0.2, 0]}>
+            <boxGeometry args={[CAR_W - 0.4, 0.15, CAR_LEN - 0.6]} />
+            <meshBasicMaterial color="#22d3ee" toneMapped={false} />
+          </mesh>
+          {[-1, 1].map((sd) => (
+            <mesh key={sd} position={[sd * (CAR_W / 2 + 0.01), CAR_H * 0.6, 0]}>
+              <boxGeometry args={[0.04, 0.5, CAR_LEN - 1]} />
+              <meshBasicMaterial color={i === 0 ? "#facc15" : "#f0abfc"} toneMapped={false} />
+            </mesh>
+          ))}
+          {i === 0 && (
+            <mesh position={[0, CAR_H * 0.55, CAR_LEN / 2 + 0.02]}>
+              <boxGeometry args={[CAR_W - 0.6, 0.5, 0.05]} />
+              <meshBasicMaterial color="#ffffff" toneMapped={false} />
+            </mesh>
+          )}
+        </group>
       ))}
     </group>
   );

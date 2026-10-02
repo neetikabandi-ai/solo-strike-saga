@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { runtime, initRun } from "../lib/runtime";
-import { MAP_HALF, PADS } from "../lib/world";
+import { LOOP, MAP_HALF, PADS, POIS } from "../lib/world";
+import { setMenuKeyHandler } from "../lib/input";
 import { RARITY, WEAPONS } from "../lib/weapons";
 import { useGameStore } from "../store/useGameStore";
 
@@ -51,8 +52,62 @@ function Minimap() {
   return <canvas ref={ref} width={160} height={160} className="rounded border-2 border-foreground/40" />;
 }
 
+const STRUCTURES = [
+  { name: "Laser Tag Command Deck", x: 0, z: 0 },
+  { name: "Station Platform", x: -LOOP + 8, z: 20 },
+  { name: "Skyport Control Tower", x: 720, z: -300 },
+  { name: "Skyport Runway", x: 600, z: -500 },
+  { name: "Arcade Neon Arch", x: 600, z: 400 },
+  { name: "Maglev Track (North)", x: 0, z: -LOOP },
+  { name: "Maglev Track (South)", x: 0, z: LOOP },
+  { name: "Maglev Track (East)", x: LOOP, z: 0 },
+];
+
+function TeleportMenu({ onClose }: { onClose: () => void }) {
+  const go = (x: number, z: number) => {
+    runtime.teleport = { x, z };
+    onClose();
+  };
+  const Btn = ({ d }: { d: { name: string; x: number; z: number } }) => (
+    <button
+      onClick={() => go(d.x, d.z)}
+      className="rounded border border-border bg-secondary px-3 py-2 text-left text-sm text-secondary-foreground hover:bg-primary hover:text-primary-foreground"
+    >
+      <div className="font-bold">{d.name}</div>
+      <div className="text-[10px] opacity-70">{d.x}, {d.z}</div>
+    </button>
+  );
+  return (
+    <div className="pointer-events-auto fixed inset-0 z-20 flex items-center justify-center bg-background/70">
+      <div className="max-h-[90vh] w-[min(720px,94vw)] overflow-auto rounded-lg border border-border bg-card p-6 text-card-foreground shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-2xl font-black tracking-widest">TELEPORT</h2>
+          <button onClick={onClose} className="rounded border border-border px-3 py-1 text-sm">Close (M)</button>
+        </div>
+        <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground">Districts</h3>
+        <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3">{POIS.map((d) => <Btn key={d.name} d={d} />)}</div>
+        <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground">Structures</h3>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{STRUCTURES.map((d) => <Btn key={d.name} d={d} />)}</div>
+        <p className="mt-4 text-xs text-muted-foreground">You'll drop in from above and can glide to land. Click the game to resume aiming.</p>
+      </div>
+    </div>
+  );
+}
+
 export function HUD() {
   const s = useGameStore();
+  const [tp, setTp] = useState(false);
+  useEffect(() => {
+    setMenuKeyHandler(() => {
+      const ph = useGameStore.getState().phase;
+      if (ph !== "playing" && ph !== "dive") return;
+      setTp((o) => {
+        if (!o) document.exitPointerLock?.();
+        return !o;
+      });
+    });
+    return () => setMenuKeyHandler(null);
+  }, []);
   const [hit, setHit] = useState(false);
   useEffect(() => {
     if (!s.hitMarker) return;
@@ -72,6 +127,7 @@ export function HUD() {
             <li>Mouse look · Left click fire · Right click aim · R reload</li>
             <li>1-3 weapons · 4 shield potion · 5 medkit · F open chest</li>
             <li>E enter/exit car · Yellow pads launch you into the sky</li>
+            <li>M teleport menu · Ride the maglev train roof</li>
           </ul>
           <button
             onClick={startMatch}
@@ -108,6 +164,7 @@ export function HUD() {
 
   return (
     <div className="pointer-events-none fixed inset-0 z-10 font-mono text-foreground">
+      {tp && <TeleportMenu onClose={() => setTp(false)} />}
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
         <div className={`h-6 w-6 rounded-full border-2 ${hit ? "border-destructive" : "border-foreground/80"}`} />
       </div>
