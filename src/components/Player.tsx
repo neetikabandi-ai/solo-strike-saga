@@ -231,6 +231,7 @@ export function Player() {
       moveWithCollision(pos, MOVE.x, MOVE.z, 0.45, height.current);
     }
     let floor = groundAt(pos.x, pos.z, height.current);
+    if (height.current >= TRAIN_ROOF - 0.8 && carUnder(pos.x, pos.z) >= 0) floor = Math.max(floor, TRAIN_ROOF);
     const onGround = height.current <= floor + 0.001;
     if (k.has("Space") && onGround && vy.current <= 0) vy.current = 7.2;
     vy.current -= GRAVITY * dt;
@@ -248,7 +249,9 @@ export function Player() {
       const pc = prevCars[car]!, nc = trainCars[car]!;
       if (height.current <= TRAIN_ROOF + 0.05) {
         // rotate + translate with the car
-        const dyaw = nc.yaw - pc.yaw;
+        let dyaw = nc.yaw - pc.yaw;
+        if (dyaw > Math.PI) dyaw -= Math.PI * 2;
+        if (dyaw < -Math.PI) dyaw += Math.PI * 2;
         const rx = pos.x - pc.x, rz = pos.z - pc.z;
         const cs = Math.cos(dyaw), sn = Math.sin(dyaw);
         pos.x = nc.x + rx * cs + rz * sn;
