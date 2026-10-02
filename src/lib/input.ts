@@ -4,6 +4,10 @@ export const pressed = new Set<string>();
 export const look = { yaw: 0, pitch: -0.12 };
 export const mouse = { firing: false, aiming: false, clicked: false };
 export const pointer = { locked: false };
+let onMenuKey: (() => void) | null = null;
+export function setMenuKeyHandler(fn: (() => void) | null) {
+  onMenuKey = fn;
+}
 
 const PREVENT = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "Tab"]);
 
@@ -11,6 +15,7 @@ export function installInput(el: HTMLElement) {
   const onDown = (e: KeyboardEvent) => {
     if (PREVENT.has(e.code)) e.preventDefault();
     if (!e.repeat) pressed.add(e.code);
+    if (e.code === "KeyM" && !e.repeat) onMenuKey?.();
     keys.add(e.code);
   };
   const onUp = (e: KeyboardEvent) => keys.delete(e.code);

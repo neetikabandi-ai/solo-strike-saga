@@ -1,7 +1,7 @@
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { addTracer, runtime, type Bot } from "../lib/runtime";
+import { addTracer, hurtBot, runtime, type Bot } from "../lib/runtime";
 import { MAP_HALF, moveWithCollision, rayBlocked } from "../lib/world";
 import { useGameStore } from "../store/useGameStore";
 import { Soldier, type SoldierClip } from "./Soldier";
@@ -105,13 +105,29 @@ export function Bots() {
       const zoneDx = bot.pos.x - store.zoneX;
       const zoneDz = bot.pos.z - store.zoneZ;
       const zoneDist = Math.hypot(zoneDx, zoneDz);
-      const mustRotate = zoneDist > store.zoneRadius * 0.85;
+      const outside = zoneDist > store.zoneRadius;
+      // rotate early: keep a safety margin from the storm wall
+      const mustRotate = zoneDist > store.zoneRadius * 0.75 - 15;
+      const lowHp = bot.health < 60 && bot.shield <= 0;
+      if (outside) bot.repath = Math.min(bot.repath, 0.3);
+      // heal up when out of combat
+      if (!engaged && bot.shield < 100) bot.shield = Math.min(100, bot.shield + 4 * dt);
 
       if (bot.repath <= 0) {
         bot.repath = 1.4 + Math.random() * 1.6;
-        if (mustRotate) {
+        if (outside) {
+          // run straight for the safe zone, no detours
+          bot.dest.set(store.zoneX, 0, store.zoneZ);
+          bot.repath = 0.5;
+        } else if (engaged && lowHp) {
+          // retreat away from the enemy, toward the zone center
+          const ax = bot.pos.x - enemyX + (store.zoneX - bot.pos.x) * 0.02;
+          const az = bot.pos.z - enemyZ + (store.zoneZ - bot.pos.z) * 0.02;
+          const n = Math.hypot(ax, az) || 1;
+          bot.dest.set(bot.pos.x + (ax / n) * 25, 0, bot.pos.z + (az / n) * 25);
+        } else if (mustRotate) {
           const ang = Math.random() * Math.PI * 2;
-          const r = store.zoneRadius * 0.5 * Math.random();
+          const r = store.zoneRadius * 0.4 * Math.random();
           bot.dest.set(store.zoneX + Math.cos(ang) * r, 0, store.zoneZ + Math.sin(ang) * r);
         } else if (engaged) {
           // close in, but keep a fighting distance and strafe
@@ -135,8 +151,14 @@ export function Bots() {
       bot.moving = destDist > 1.2;
       if (bot.moving) {
         DIR.normalize();
-        const sp = mustRotate ? BOT_SPEED * 1.35 : BOT_SPEED;
+        const sp = outside ? BOT_SPEED * 1.7 : mustRotate || lowHp ? BOT_SPEED * 1.4 : BOT_SPEED;
+        const bx = bot.pos.x, bz = bot.pos.z;
         moveWithCollision(bot.pos, DIR.x * sp * dt, DIR.z * sp * dt, 0.55);
+        // stuck on a wall? slide sideways
+        if (Math.hypot(bot.pos.x - bx, bot.pos.z - bz) < sp * dt * 0.2) {
+          const side = bot.id % 2 ? 1 : -1;
+          moveWithCollision(bot.pos, -DIR.z * side * sp * dt, DIR.x * side * sp * dt, 0.55);
+        }
       }
 
       // face the enemy when engaged, otherwise face travel direction
@@ -167,10 +189,9 @@ export function Bots() {
           if (fightPlayer) {
             store.damage(4 + Math.random() * 6);
           } else if (foe) {
-            foe.health -= 9 + Math.random() * 8;
-            if (foe.health <= 0) {
-              foe.alive = false;
-              foe.dying = 0;
+            foe.aware = true;
+            if (foe.target < 0) foe.target = bot.id;
+            if (hurtBot(foe, 9 + Math.random() * 8)) {
               store.pushFeed(`${bot.name} eliminated ${foe.name}`);
               if (bot.target === foe.id) bot.target = -1;
             }

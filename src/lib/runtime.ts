@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { CHEST_SPOTS, clampMap, findFree, POIS, VEHICLE_SPOTS } from "./world";
+import { CHEST_SPOTS, clampMap, findFree, LOOP, POIS, TRAIN_Y, VEHICLE_SPOTS } from "./world";
 import { TOTAL_BOTS } from "../store/useGameStore";
 
 export type Bot = {
@@ -48,6 +48,8 @@ export const runtime = {
   view: { bob: 0, ads: false },
   vehicles: [] as Vehicle[],
   driving: -1,
+  teleport: null as null | { x: number; z: number },
+  tpOpen: false,
   bus: { sx: 0, sz: 0, ex: 0, ez: 0, dur: 30, yaw: 0 },
 };
 
@@ -147,4 +149,42 @@ export function hurtBot(bot: Bot, n: number): boolean {
 export function addTracer(from: THREE.Vector3, to: THREE.Vector3, hostile: boolean) {
   runtime.tracers.push({ id: ++tracerId, from: from.clone(), to: to.clone(), life: hostile ? 0.12 : 0.07, hostile });
   if (runtime.tracers.length > 50) runtime.tracers.shift();
+}
+
+// ---- maglev train --------------------------------------------------
+export const TRAIN_SPEED = 22;
+export const TRAIN_CARS = 4;
+export const CAR_LEN = 14;
+export const CAR_GAP = 2;
+export const CAR_W = 3.4;
+export const CAR_H = 3.2;
+export const TRAIN_ROOF = TRAIN_Y + CAR_H;
+const PERIM = LOOP * 8;
+/** Point + heading on the square loop at arc distance s. */
+export function loopAt(s: number, out: { x: number; z: number; yaw: number }) {
+  const L = LOOP;
+  let d = ((s % PERIM) + PERIM) % PERIM;
+  const seg = Math.floor(d / (2 * L));
+  d -= seg * 2 * L;
+  if (seg === 0) { out.x = -L + d; out.z = -L; out.yaw = Math.PI / 2; }
+  else if (seg === 1) { out.x = L; out.z = -L + d; out.yaw = 0; }
+  else if (seg === 2) { out.x = L - d; out.z = L; out.yaw = -Math.PI / 2; }
+  else { out.x = -L; out.z = L - d; out.yaw = Math.PI; }
+  return out;
+}
+export const trainCars = Array.from({ length: TRAIN_CARS }, () => ({ x: 0, z: 0, yaw: 0 }));
+export function updateTrain(t: number) {
+  const head = t * TRAIN_SPEED;
+  for (let i = 0; i < TRAIN_CARS; i++) loopAt(head - i * (CAR_LEN + CAR_GAP) - CAR_LEN / 2, trainCars[i]!);
+}
+/** Index of the car whose roof footprint covers (x,z), or -1. */
+export function carUnder(x: number, z: number): number {
+  for (let i = 0; i < TRAIN_CARS; i++) {
+    const c = trainCars[i]!;
+    const dx = x - c.x, dz = z - c.z;
+    const along = Math.abs(dx * Math.sin(c.yaw) + dz * Math.cos(c.yaw));
+    const side = Math.abs(dx * Math.cos(c.yaw) - dz * Math.sin(c.yaw));
+    if (along < CAR_LEN / 2 && side < CAR_W / 2) return i;
+  }
+  return -1;
 }
