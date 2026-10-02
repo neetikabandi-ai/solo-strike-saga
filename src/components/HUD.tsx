@@ -116,7 +116,7 @@ export function HUD() {
 
   useEffect(() => {
     if (tp) document.exitPointerLock?.();
-    else if (s.phase === "playing" || s.phase === "dive") document.querySelector("canvas")?.parentElement?.parentElement?.requestPointerLock?.();
+    else if (s.phase === "playing" || s.phase === "dive") document.getElementById("game-wrap")?.requestPointerLock?.();
   }, [tp]);
 
   if (s.phase === "menu") {

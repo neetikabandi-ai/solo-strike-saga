@@ -24,7 +24,7 @@ export function GameCanvas() {
   }, []);
 
   return (
-    <div ref={wrap} className="fixed inset-0">
+    <div ref={wrap} id="game-wrap" className="fixed inset-0">
       <Canvas shadows dpr={[1, 1.5]} camera={{ position: [0, 10, 14], fov: 70, far: 2500, near: 0.05 }}>
         <color attach="background" args={["#070a14"]} />
         <fog attach="fog" args={["#1a0f2e", 40, 260]} />
