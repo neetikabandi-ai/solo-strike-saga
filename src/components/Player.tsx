@@ -50,16 +50,19 @@ export function Player() {
     updateTrain(phase === "menu" ? clock.elapsedTime : runtime.clock);
 
     // ---- teleport menu request -----------------------------------
-    if (runtime.teleport && (phase === "playing" || phase === "dive")) {
+    if (runtime.teleport && (phase === "playing" || phase === "dive" || phase === "bus")) {
       const t = runtime.teleport;
       runtime.teleport = null;
       runtime.driving = -1;
       pos.set(t.x, 0, t.z);
-      height.current = Math.max(groundAt(t.x, t.z, 400), 0) + 45;
+      height.current = Math.max(groundAt(t.x, t.z, 400), 0);
+      pos.y = height.current;
       vy.current = 0;
       reloadT.current = 0;
       useT.current = 0;
-      set({ phase: "dive", prompt: null, reloading: false, using: null });
+      runtime.gliding = false;
+      runtime.grace = Math.max(runtime.grace, 2);
+      set({ phase: "playing", prompt: null, reloading: false, using: null });
       pressed.clear();
       mouse.clicked = false;
       return;

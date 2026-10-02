@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { runtime, initRun } from "../lib/runtime";
 import { LOOP, MAP_HALF, PADS, POIS } from "../lib/world";
-import { setMenuKeyHandler } from "../lib/input";
 import { RARITY, WEAPONS } from "../lib/weapons";
 import { useGameStore } from "../store/useGameStore";
 
@@ -88,7 +87,7 @@ function TeleportMenu({ onClose }: { onClose: () => void }) {
         <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3">{POIS.map((d) => <Btn key={d.name} d={d} />)}</div>
         <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground">Structures</h3>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{STRUCTURES.map((d) => <Btn key={d.name} d={d} />)}</div>
-        <p className="mt-4 text-xs text-muted-foreground">You'll drop in from above and can glide to land. Click the game to resume aiming.</p>
+        <p className="mt-4 text-xs text-muted-foreground">Press M again to close.</p>
       </div>
     </div>
   );
@@ -98,15 +97,14 @@ export function HUD() {
   const s = useGameStore();
   const [tp, setTp] = useState(false);
   useEffect(() => {
-    setMenuKeyHandler(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== "KeyM" || e.repeat) return;
       const ph = useGameStore.getState().phase;
-      if (ph !== "playing" && ph !== "dive") return;
-      setTp((o) => {
-        if (!o) document.exitPointerLock?.();
-        return !o;
-      });
-    });
-    return () => setMenuKeyHandler(null);
+      if (ph !== "playing" && ph !== "dive" && ph !== "bus") return;
+      setTp((o) => !o);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
   const [hit, setHit] = useState(false);
   useEffect(() => {
@@ -115,6 +113,11 @@ export function HUD() {
     const t = setTimeout(() => setHit(false), 120);
     return () => clearTimeout(t);
   }, [s.hitMarker]);
+
+  useEffect(() => {
+    if (tp) document.exitPointerLock?.();
+    else if (s.phase === "playing" || s.phase === "dive") document.getElementById("game-wrap")?.requestPointerLock?.();
+  }, [tp]);
 
   if (s.phase === "menu") {
     return (
