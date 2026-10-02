@@ -100,7 +100,7 @@ export function HUD() {
     const onKey = (e: KeyboardEvent) => {
       if (e.code !== "KeyM" || e.repeat) return;
       const ph = useGameStore.getState().phase;
-      if (ph !== "playing" && ph !== "dive") return;
+      if (ph !== "playing" && ph !== "dive" && ph !== "bus") return;
       setTp((o) => !o);
     };
     window.addEventListener("keydown", onKey);

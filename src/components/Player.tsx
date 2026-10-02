@@ -50,7 +50,7 @@ export function Player() {
     updateTrain(phase === "menu" ? clock.elapsedTime : runtime.clock);
 
     // ---- teleport menu request -----------------------------------
-    if (runtime.teleport && (phase === "playing" || phase === "dive")) {
+    if (runtime.teleport && (phase === "playing" || phase === "dive" || phase === "bus")) {
       const t = runtime.teleport;
       runtime.teleport = null;
       runtime.driving = -1;
