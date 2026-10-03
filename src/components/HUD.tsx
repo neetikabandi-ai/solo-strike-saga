@@ -63,19 +63,24 @@ const STRUCTURES = [
 ];
 
 function TeleportMenu({ onClose }: { onClose: () => void }) {
-  const go = (x: number, z: number) => {
-    runtime.teleport = { x, z };
+  const go = (x: number, z: number, train = false) => {
+    runtime.teleport = { x, z, train };
     onClose();
   };
-  const Btn = ({ d }: { d: { name: string; x: number; z: number } }) => (
+
+  const Btn = ({ d, train = false }: { d: { name: string; x: number; z: number }; train?: boolean }) => (
     <button
-      onClick={() => go(d.x, d.z)}
-      className="rounded border border-border bg-secondary px-3 py-2 text-left text-sm text-secondary-foreground hover:bg-primary hover:text-primary-foreground"
+      onClick={() => go(d.x, d.z, train)}
+      className="rounded border border-border bg-secondary px-3 py-2 text-left text-sm text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
     >
-      <div className="font-bold">{d.name}</div>
-      <div className="text-[10px] opacity-70">{d.x}, {d.z}</div>
+      <div className="font-bold flex items-center justify-between">
+        <span>{d.name}</span>
+        {train && <span className="text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded">LIVE</span>}
+      </div>
+      <div className="text-[10px] opacity-70">{train ? "Moving Train Car" : `${d.x}, ${d.z}`}</div>
     </button>
   );
+
   return (
     <div className="pointer-events-auto fixed inset-0 z-20 flex items-center justify-center bg-background/70">
       <div className="max-h-[90vh] w-[min(720px,94vw)] overflow-auto rounded-lg border border-border bg-card p-6 text-card-foreground shadow-xl">
@@ -83,6 +88,12 @@ function TeleportMenu({ onClose }: { onClose: () => void }) {
           <h2 className="text-2xl font-black tracking-widest">TELEPORT</h2>
           <button onClick={onClose} className="rounded border border-border px-3 py-1 text-sm">Close (M)</button>
         </div>
+
+        <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground text-cyan-400">Live Transports</h3>
+        <div className="mb-5 grid grid-cols-1 sm:grid-cols-2">
+          <Btn d={{ name: "Maglev Train (Board Inside)", x: 0, z: 0 }} train={true} />
+        </div>
+
         <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground">Districts</h3>
         <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3">{POIS.map((d) => <Btn key={d.name} d={d} />)}</div>
         <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground">Structures</h3>
@@ -129,7 +140,7 @@ export function HUD() {
             <li>WASD move · Shift sprint · C crouch · Space jump</li>
             <li>Mouse look · Left click fire · Right click aim · R reload</li>
             <li>1-3 weapons · 4 shield potion · 5 medkit · F open chest</li>
-            <li>E enter/exit car · Yellow pads launch you into the sky</li>
+            <li>E enter/exit car or train · Yellow pads launch you into the sky</li>
             <li>M teleport menu · Ride the maglev train roof</li>
           </ul>
           <button

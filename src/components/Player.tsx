@@ -2,7 +2,7 @@ import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import * as THREE from "three";
 import { keys, look, mouse, pressed } from "../lib/input";
-import { addTracer, BUS_ALT, busPos, carUnder, hurtBot, runtime, trainCars, TRAIN_ROOF, updateTrain, type Chest } from "../lib/runtime";
+import { addTracer, BUS_ALT, busPos, carUnder, hurtBot, runtime, trainCars, TRAIN_ROOF, TRAIN_Y, updateTrain, type Chest } from "../lib/runtime";
 import { clampMap, collides, findFree, groundAt, PADS, moveWithCollision, rayBlocked, raySphere } from "../lib/world";
 import { RARITY, rollWeapon, WEAPONS } from "../lib/weapons";
 import { STORM_DPS, useGameStore } from "../store/useGameStore";
@@ -45,7 +45,6 @@ export function Player() {
     const set = useGameStore.setState;
 
     if (phase === "bus" || phase === "dive" || phase === "playing") runtime.clock += dt;
-    // train position before/after this frame (carry riders)
     const prevCars = trainCars.map((c) => ({ ...c }));
     updateTrain(phase === "menu" ? clock.elapsedTime : runtime.clock);
 
@@ -54,15 +53,64 @@ export function Player() {
       const t = runtime.teleport;
       runtime.teleport = null;
       runtime.driving = -1;
-      pos.set(t.x, 0, t.z);
-      height.current = Math.max(groundAt(t.x, t.z, 400), 0);
-      pos.y = height.current;
+
+      if (t.train) {
+        const lead = trainCars[0]!;
+        runtime.ridingTrain = 0;
+        pos.set(lead.x, TRAIN_Y + 0.5, lead.z);
+        height.current = TRAIN_Y + 0.5;
+        look.yaw = lead.yaw;
+      } else {
+        runtime.ridingTrain = -1;
+        pos.set(t.x, 0, t.z);
+        height.current = Math.max(groundAt(t.x, t.z, 400), 0);
+        pos.y = height.current;
+      }
+
       vy.current = 0;
       reloadT.current = 0;
       useT.current = 0;
       runtime.gliding = false;
       runtime.grace = Math.max(runtime.grace, 2);
       set({ phase: "playing", prompt: null, reloading: false, using: null });
+      pressed.clear();
+      mouse.clicked = false;
+      return;
+    }
+
+    // ---- riding inside the train passenger cabin -----------------
+    if (runtime.ridingTrain >= 0) {
+      const carIdx = runtime.ridingTrain;
+      const pc = prevCars[carIdx]!, nc = trainCars[carIdx]!;
+
+      let dyaw = nc.yaw - pc.yaw;
+      if (dyaw > Math.PI) dyaw -= Math.PI * 2;
+      if (dyaw < -Math.PI) dyaw += Math.PI * 2;
+      look.yaw += dyaw;
+
+      pos.set(nc.x, TRAIN_Y + 0.5, nc.z);
+      height.current = TRAIN_Y + 0.5;
+      vy.current = 0;
+      runtime.view.ads = false;
+
+      const cp = Math.cos(look.pitch);
+      AIM.set(-Math.sin(look.yaw) * cp, Math.sin(look.pitch), -Math.cos(look.yaw) * cp).normalize();
+      
+      EYE.set(pos.x, pos.y + 1.2, pos.z);
+      cam.position.copy(EYE);
+      cam.lookAt(EYE.x + AIM.x, EYE.y + AIM.y, EYE.z + AIM.z);
+      setFov(85);
+
+      const promptText = "Press E to exit train";
+      if (store.prompt !== promptText) set({ prompt: promptText });
+
+      if (pressed.has("KeyE")) {
+        runtime.ridingTrain = -1;
+        height.current = TRAIN_ROOF;
+        pos.y = TRAIN_ROOF;
+        set({ prompt: null });
+      }
+
       pressed.clear();
       mouse.clicked = false;
       return;
@@ -144,7 +192,6 @@ export function Player() {
       }
       EYE.set(pos.x, height.current + 1.6, pos.z);
       if (glide) {
-        // third person while gliding
         cam.position.copy(EYE).addScaledVector(AIM, -9);
         cam.position.y += 3;
         cam.lookAt(EYE.x + AIM.x * 6, EYE.y + AIM.y * 6, EYE.z + AIM.z * 6);
@@ -184,7 +231,6 @@ export function Player() {
       pos.set(v.x, 0, v.z);
       height.current = 0;
       runtime.view.ads = false;
-      // chase camera, mouse can orbit
       const cy = v.yaw + (look.yaw - v.yaw) * 0;
       look.yaw += (v.yaw - look.yaw) * (1 - Math.exp(-3 * dt));
       cam.position.set(v.x + Math.sin(look.yaw) * 9, 4.2, v.z + Math.cos(look.yaw) * 9);
@@ -239,19 +285,18 @@ export function Player() {
     if (k.has("Space") && onGround && vy.current <= 0) vy.current = 7.2;
     vy.current -= GRAVITY * dt;
     height.current += vy.current * dt;
-    // ceiling bump
+
     if (vy.current > 0 && collides(pos.x, pos.z, 0.3, height.current)) {
       height.current -= vy.current * dt;
       vy.current = 0;
     }
     floor = groundAt(pos.x, pos.z, Math.max(height.current, floor));
-    // riding the maglev roof
+
     const car = carUnder(pos.x, pos.z);
     if (car >= 0 && height.current >= TRAIN_ROOF - 0.8 && vy.current <= 0) {
       floor = Math.max(floor, TRAIN_ROOF);
       const pc = prevCars[car]!, nc = trainCars[car]!;
       if (height.current <= TRAIN_ROOF + 0.05) {
-        // rotate + translate with the car
         let dyaw = nc.yaw - pc.yaw;
         if (dyaw > Math.PI) dyaw -= Math.PI * 2;
         if (dyaw < -Math.PI) dyaw += Math.PI * 2;
@@ -315,7 +360,7 @@ export function Player() {
       }
     }
 
-    // ---- chests --------------------------------------------------
+    // ---- chests & train/car mounts -------------------------------
     let near: Chest | null = null;
     let nd = 2.8;
     for (const c of runtime.chests) {
@@ -326,16 +371,42 @@ export function Player() {
         near = c;
       }
     }
+
     let nearCar = -1;
     for (const v of runtime.vehicles) if (Math.hypot(v.x - pos.x, v.z - pos.z) < 3.5) nearCar = v.id;
-    const prompt = near ? "Press F to open chest" : nearCar >= 0 ? "Press E to drive" : null;
+
+    let nearTrainCar = -1;
+    for (let i = 0; i < trainCars.length; i++) {
+      const tc = trainCars[i]!;
+      const d = Math.hypot(tc.x - pos.x, tc.z - pos.z);
+      if (d < 4.5 && Math.abs(height.current - TRAIN_Y) < 4.5) {
+        nearTrainCar = i;
+        break;
+      }
+    }
+
+    const prompt = near 
+      ? "Press F to open chest" 
+      : nearTrainCar >= 0 
+        ? "Press E to board train" 
+        : nearCar >= 0 
+          ? "Press E to drive" 
+          : null;
+
     if (prompt !== store.prompt) set({ prompt });
-    if (nearCar >= 0 && pressed.has("KeyE")) {
+
+    if (nearTrainCar >= 0 && pressed.has("KeyE")) {
+      cancelActions();
+      runtime.ridingTrain = nearTrainCar;
+      look.yaw = trainCars[nearTrainCar]!.yaw;
+      set({ prompt: null });
+    } else if (nearCar >= 0 && pressed.has("KeyE")) {
       cancelActions();
       runtime.driving = nearCar;
       look.yaw = runtime.vehicles[nearCar]!.yaw;
       set({ prompt: null });
     }
+
     if (near && pressed.has("KeyF")) {
       near.opened = true;
       runtime.chestVersion++;

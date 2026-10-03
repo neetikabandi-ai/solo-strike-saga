@@ -48,7 +48,8 @@ export const runtime = {
   view: { bob: 0, ads: false },
   vehicles: [] as Vehicle[],
   driving: -1,
-  teleport: null as null | { x: number; z: number },
+  ridingTrain: -1,
+  teleport: null as null | { x: number; z: number; train?: boolean },
   tpOpen: false,
   bus: { sx: 0, sz: 0, ex: 0, ez: 0, dur: 30, yaw: 0 },
 };
@@ -64,7 +65,6 @@ export function busPos(t: number, out: THREE.Vector3) {
 const TMP = new THREE.Vector3();
 
 export function initRun() {
-  // random straight flight path across the island
   const a = Math.random() * Math.PI * 2;
   const off = (Math.random() - 0.5) * 500;
   const px = -Math.sin(a) * off;
@@ -87,13 +87,13 @@ export function initRun() {
   runtime.chestVersion++;
   runtime.vehicles = VEHICLE_SPOTS.map((v, i) => ({ id: i, x: v.x, z: v.z, yaw: v.yaw, speed: 0 }));
   runtime.driving = -1;
+  runtime.ridingTrain = -1;
 
   runtime.bots = Array.from({ length: TOTAL_BOTS }, (_, i) => {
     const jump = b.dur * (0.08 + Math.random() * 0.85);
     busPos(jump / b.dur, TMP);
     let tx = TMP.x + (Math.random() - 0.5) * 240;
     let tz = TMP.z + (Math.random() - 0.5) * 240;
-    // most bots head for the nearest named location
     let best = POIS[0]!;
     let bd = Infinity;
     for (const p of POIS) {
@@ -132,7 +132,6 @@ export function initRun() {
   });
 }
 
-/** Shield first, then health. Returns true when this hit killed the bot. */
 export function hurtBot(bot: Bot, n: number): boolean {
   if (!bot.alive) return false;
   const abs = Math.min(bot.shield, n);
@@ -151,7 +150,6 @@ export function addTracer(from: THREE.Vector3, to: THREE.Vector3, hostile: boole
   if (runtime.tracers.length > 50) runtime.tracers.shift();
 }
 
-// ---- maglev train --------------------------------------------------
 export const TRAIN_SPEED = 22;
 export const TRAIN_CARS = 4;
 export const CAR_LEN = 14;
@@ -160,7 +158,7 @@ export const CAR_W = 3.4;
 export const CAR_H = 3.2;
 export const TRAIN_ROOF = TRAIN_Y + CAR_H;
 const PERIM = LOOP * 8;
-/** Point + heading on the square loop at arc distance s. */
+
 export function loopAt(s: number, out: { x: number; z: number; yaw: number }) {
   const L = LOOP;
   let d = ((s % PERIM) + PERIM) % PERIM;
@@ -172,12 +170,14 @@ export function loopAt(s: number, out: { x: number; z: number; yaw: number }) {
   else { out.x = -L; out.z = L - d; out.yaw = Math.PI; }
   return out;
 }
+
 export const trainCars = Array.from({ length: TRAIN_CARS }, () => ({ x: 0, z: 0, yaw: 0 }));
+
 export function updateTrain(t: number) {
   const head = t * TRAIN_SPEED;
   for (let i = 0; i < TRAIN_CARS; i++) loopAt(head - i * (CAR_LEN + CAR_GAP) - CAR_LEN / 2, trainCars[i]!);
 }
-/** Index of the car whose roof footprint covers (x,z), or -1. */
+
 export function carUnder(x: number, z: number): number {
   for (let i = 0; i < TRAIN_CARS; i++) {
     const c = trainCars[i]!;
