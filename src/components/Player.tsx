@@ -99,7 +99,8 @@ export function Player() {
       EYE.set(pos.x, pos.y + 1.2, pos.z);
       cam.position.copy(EYE);
       cam.lookAt(EYE.x + AIM.x, EYE.y + AIM.y, EYE.z + AIM.z);
-      setFov(85);
+      cam.fov += (85 - cam.fov) * (1 - Math.exp(-14 * dt));
+      cam.updateProjectionMatrix();
 
       const promptText = "Press E to exit train";
       if (store.prompt !== promptText) set({ prompt: promptText });

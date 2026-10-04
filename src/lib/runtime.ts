@@ -2,6 +2,8 @@ import * as THREE from "three";
 import { CHEST_SPOTS, clampMap, findFree, LOOP, POIS, TRAIN_Y, VEHICLE_SPOTS } from "./world";
 import { TOTAL_BOTS } from "../store/useGameStore";
 
+export { TRAIN_Y };
+
 export type Bot = {
   id: number;
   name: string;
