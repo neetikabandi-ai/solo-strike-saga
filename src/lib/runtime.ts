@@ -186,7 +186,9 @@ export function carUnder(x: number, z: number): number {
     const dx = x - c.x, dz = z - c.z;
     const along = Math.abs(dx * Math.sin(c.yaw) + dz * Math.cos(c.yaw));
     const side = Math.abs(dx * Math.cos(c.yaw) - dz * Math.sin(c.yaw));
-    if (along < CAR_LEN / 2 && side < CAR_W / 2) return i;
+    // A little wider/longer than the visible roof so boarding remains reliable
+    // while the train advances between physics frames and rounds a corner.
+    if (along < CAR_LEN / 2 + 0.75 && side < CAR_W / 2 + 0.55) return i;
   }
   return -1;
 }

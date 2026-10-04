@@ -355,11 +355,16 @@ function build() {
   for (const side of [-1, 1]) {
     for (const axis of [0, 1]) {
       const c = side * LOOP;
-      if (axis === 0) add({ x: 0, z: c, w: LOOP * 2 + 4, d: 4, h: 0.4, y0: TRAIN_Y - 0.4, kind: "floor", color: "#1d2130" });
-      else add({ x: c, z: 0, w: 4, d: LOOP * 2 + 4, h: 0.4, y0: TRAIN_Y - 0.4, kind: "floor", color: "#1d2130" });
+      if (axis === 0) add({ x: 0, z: c, w: LOOP * 2 + 4, d: 5.5, h: 0.65, y0: TRAIN_Y - 0.65, kind: "floor", color: "#62676d" });
+      else add({ x: c, z: 0, w: 5.5, d: LOOP * 2 + 4, h: 0.65, y0: TRAIN_Y - 0.65, kind: "floor", color: "#62676d" });
+      // Twin steel running rails and regular concrete sleepers.
       for (const s of [-1, 1]) {
-        if (axis === 0) neon.push({ x: 0, y: TRAIN_Y - 0.3, z: c + s * 2.05, w: LOOP * 2 + 4, h: 0.12, d: 0.1, color: "#22d3ee" });
-        else neon.push({ x: c + s * 2.05, y: TRAIN_Y - 0.3, z: 0, w: 0.1, h: 0.12, d: LOOP * 2 + 4, color: "#22d3ee" });
+        if (axis === 0) add({ x: 0, z: c + s * 1.25, w: LOOP * 2 + 4, d: 0.16, h: 0.18, y0: TRAIN_Y, kind: "wall", color: "#a4a8ac" });
+        else add({ x: c + s * 1.25, z: 0, w: 0.16, d: LOOP * 2 + 4, h: 0.18, y0: TRAIN_Y, kind: "wall", color: "#a4a8ac" });
+      }
+      for (let p = -LOOP; p <= LOOP; p += 8) {
+        if (axis === 0) add({ x: p, z: c, w: 0.45, d: 4.2, h: 0.12, y0: TRAIN_Y, kind: "wall", color: "#34383c" });
+        else add({ x: c, z: p, w: 4.2, d: 0.45, h: 0.12, y0: TRAIN_Y, kind: "wall", color: "#34383c" });
       }
       for (let t = -GRID_N; t <= GRID_N; t++) {
         const p = t * CELL_W;
@@ -426,8 +431,9 @@ function build() {
   // ---------------- Railway Station (west, on the maglev loop) ----------------
   {
     const px = -LOOP + 8;
-    deck(px, 0, 12, 200, TRAIN_Y, "#facc15");
-    add({ x: px, z: 0, w: 14, d: 200, h: 0.4, y0: TRAIN_Y + 6, kind: "floor", color: "#1b1f2e" });
+    add({ x: px, z: 0, w: 12, d: 200, h: 0.45, y0: TRAIN_Y - 0.45, kind: "floor", color: "#8a8d8f" });
+    add({ x: px, z: 0, w: 14, d: 200, h: 0.4, y0: TRAIN_Y + 6, kind: "floor", color: "#3d4247" });
+    add({ x: px + 4.9, z: 0, w: 0.35, d: 190, h: 0.08, y0: TRAIN_Y, kind: "wall", color: "#e2b714" });
     for (let z = -96; z <= 96; z += 24) {
       add({ x: px + 5.5, z, w: 0.8, d: 0.8, h: TRAIN_Y, y0: 0, kind: "wall", color: "#2b3040" });
       add({ x: px - 5.5, z, w: 0.6, d: 0.6, h: 6, y0: TRAIN_Y, kind: "wall", color: "#2b3040" });
@@ -437,6 +443,10 @@ function build() {
     neon.push({ x: px, y: TRAIN_Y + 5.5, z: 100.3, w: 10, h: 1.2, d: 0.2, color: "#22d3ee" });
     stairs(px, 100, 0, 1, TRAIN_Y, 0, 4);
     stairs(px, -100, 0, -1, TRAIN_Y, 0, 4);
+    // Low boarding steps beside the stopping line.
+    for (const z of [-72, -24, 24, 72]) {
+      add({ x: px + 3.8, z, w: 1.8, d: 5, h: 0.35, y0: TRAIN_Y, kind: "step", color: "#70757a" });
+    }
     closeGroup();
     enterable(-505, -60, 30, 40, 3, "#232838", "#facc15");
     closeGroup();
@@ -449,54 +459,60 @@ function build() {
   // ---------------- Skyport (airport, NE) ----------------
   {
     const rz = -500;
+    add({ x: 615, z: rz, w: 280, d: 42, h: 0.12, y0: 0, kind: "floor", color: "#31363b" });
     for (let x = 490; x <= 740; x += 10) {
-      neon.push({ x, y: 0.05, z: rz - 14, w: 0.6, h: 0.1, d: 0.6, color: "#60a5fa" });
-      neon.push({ x, y: 0.05, z: rz + 14, w: 0.6, h: 0.1, d: 0.6, color: "#60a5fa" });
-      neon.push({ x, y: 0.03, z: rz, w: 4, h: 0.05, d: 0.4, color: "#e5e7eb" });
+      neon.push({ x, y: 0.14, z: rz - 18, w: 0.25, h: 0.06, d: 0.25, color: "#f8fafc" });
+      neon.push({ x, y: 0.14, z: rz + 18, w: 0.25, h: 0.06, d: 0.25, color: "#f8fafc" });
+      add({ x, z: rz, w: 5, d: 0.28, h: 0.04, y0: 0.12, kind: "floor", color: "#e5e7eb" });
+    }
+    for (const x of [482, 492, 502]) add({ x, z: rz, w: 1.2, d: 18, h: 0.05, y0: 0.12, kind: "floor", color: "#f8fafc" });
+    // Apron stand markings and service lanes.
+    for (const z of [-430, -600]) for (const x of [540, 590, 640, 700]) {
+      add({ x, z, w: 36, d: 0.18, h: 0.04, y0: 0.02, kind: "floor", color: "#d9b64c" });
+      add({ x, z: z + 11, w: 0.18, d: 22, h: 0.04, y0: 0.02, kind: "floor", color: "#d9b64c" });
     }
     // parked jets
     for (const [x, z] of [[540, -430], [640, -430], [590, -600], [700, -600]] as const) {
-      add({ x, z, w: 34, d: 4.5, h: 4.5, y0: 0.6, kind: "wall", color: "#cbd5e1" });
-      add({ x: x + 2, z, w: 6, d: 30, h: 0.6, y0: 2.5, kind: "wall", color: "#94a3b8" });
-      add({ x: x - 15, z, w: 3, d: 10, h: 0.5, y0: 6, kind: "wall", color: "#94a3b8" });
-      add({ x: x - 15, z, w: 3, d: 0.6, h: 5, y0: 4.5, kind: "wall", color: "#94a3b8" });
-      neon.push({ x: x + 17.2, y: 3, z, w: 0.3, h: 1, d: 2, color: "#fb7185" });
+      // Compact collision hull; the recognizable aircraft is rendered separately.
+      add({ x, z, w: 28, d: 3.6, h: 3.4, y0: 0.8, kind: "wall", color: "#d6d9dc" });
+      add({ x: x + 1, z, w: 5, d: 25, h: 0.45, y0: 2.7, kind: "wall", color: "#b9bec3" });
       chests.push({ x: x + 5, z: z + 5, y: 0, rot: 0 }, { x, z, y: 5.1, rot: 0 });
       closeGroup();
     }
-    enterable(540, -300, 60, 26, 3, "#1e293b", "#60a5fa"); // terminal
+    enterable(540, -300, 60, 26, 3, "#4a5158", "#d7e1e8"); // terminal
     closeGroup();
     tower(720, -300, 10, 10, 46, "#1e293b", "#22d3ee"); // control tower
     closeGroup();
     deck(720, -300, 18, 18, 46.4, "#22d3ee");
     closeGroup();
     for (const x of [500, 560, 620, 680]) {
-      enterable(x + 10, -700, 44, 30, 2, "#202a2e", "#34d399"); // hangars
+      enterable(x + 10, -700, 44, 30, 2, "#555d62", "#d7e1e8"); // hangars
       closeGroup();
     }
   }
 
   // ---------------- Arcade District (gaming zone, SE) ----------------
   {
-    const glow = ["#ff2d95", "#22d3ee", "#facc15", "#a3e635", "#c084fc"];
+    const glow = ["#e35745", "#45a6b7", "#d8ad45"];
+    const facades = ["#343a40", "#454b50", "#50555a", "#2f3539"];
     for (let x = 500; x <= 720; x += 55)
       for (let z = 330; z <= 720; z += 55) {
         const r = rnd();
-        if (r < 0.55) enterable(x, z, 26, 26, 3, "#2a1640", pick(glow));
-        else if (r < 0.8) labyrinth(x, z, 4, pick(glow));
-        else tower(x, z, 18, 18, 30 + rnd() * 30, "#2a1640", pick(glow));
+        if (r < 0.65) enterable(x, z, 26, 26, 3, pick(facades), pick(glow));
+        else if (r < 0.82) labyrinth(x, z, 4, pick(glow));
+        else tower(x, z, 18, 18, 30 + rnd() * 30, pick(facades), pick(glow));
         closeGroup();
-        // floating hologram cubes
-        for (let k = 0; k < 3; k++) {
-          const s = 1.5 + rnd() * 2;
-          neon.push({ x: x + (rnd() - 0.5) * 40, y: 22 + rnd() * 25, z: z + (rnd() - 0.5) * 40, w: s, h: s, d: s, color: pick(glow) });
-        }
-        neon.push({ x: x + 13.5, y: 6, z, w: 0.2, h: 3, d: 12, color: pick(glow) });
+        // Grounded storefront sign, canvas awning, and rooftop plant equipment.
+        neon.push({ x: x + 13.25, y: 3.2, z, w: 0.12, h: 1.1, d: 7, color: pick(glow) });
+        add({ x: x + 13.8, z, w: 2.4, d: 9, h: 0.25, y0: 2.35, kind: "floor", color: "#596168" });
+        add({ x: x - 4, z: z + 2, w: 7, d: 5, h: 2, y0: 12, kind: "wall", color: "#6b7379" });
+        add({ x: x + 5, z: z - 4, w: 4, d: 4, h: 1.2, y0: 12, kind: "wall", color: "#737b80" });
       }
-    // giant neon arch at the entrance
-    neon.push({ x: 600, y: 18, z: 300, w: 60, h: 2, d: 1, color: "#ff2d95" });
-    neon.push({ x: 570, y: 9, z: 300, w: 1.5, h: 18, d: 1.5, color: "#22d3ee" });
-    neon.push({ x: 630, y: 9, z: 300, w: 1.5, h: 18, d: 1.5, color: "#22d3ee" });
+    // Street-level entrance gantry rather than a floating neon monument.
+    add({ x: 600, z: 300, w: 58, d: 1.2, h: 2, y0: 8, kind: "wall", color: "#4b5258" });
+    add({ x: 572, z: 300, w: 2, d: 2, h: 10, y0: 0, kind: "wall", color: "#41484e" });
+    add({ x: 628, z: 300, w: 2, d: 2, h: 10, y0: 0, kind: "wall", color: "#41484e" });
+    neon.push({ x: 600, y: 8.9, z: 299.35, w: 22, h: 0.5, d: 0.12, color: "#e35745" });
   }
 
   // street chests

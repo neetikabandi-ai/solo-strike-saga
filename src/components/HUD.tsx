@@ -56,7 +56,7 @@ const STRUCTURES = [
   { name: "Station Platform", x: -LOOP + 8, z: 20 },
   { name: "Skyport Control Tower", x: 720, z: -300 },
   { name: "Skyport Runway", x: 600, z: -500 },
-  { name: "Arcade Neon Arch", x: 600, z: 400 },
+  { name: "Arcade Promenade", x: 600, z: 400 },
   { name: "Maglev Track (North)", x: 0, z: -LOOP },
   { name: "Maglev Track (South)", x: 0, z: LOOP },
   { name: "Maglev Track (East)", x: LOOP, z: 0 },
@@ -91,7 +91,7 @@ function TeleportMenu({ onClose }: { onClose: () => void }) {
 
         <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground text-cyan-400">Live Transports</h3>
         <div className="mb-5 grid grid-cols-1 sm:grid-cols-2">
-          <Btn d={{ name: "Maglev Train (Board Inside)", x: 0, z: 0 }} train={true} />
+          <Btn d={{ name: "Train Roof", x: 0, z: 0 }} train={true} />
         </div>
 
         <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground">Districts</h3>

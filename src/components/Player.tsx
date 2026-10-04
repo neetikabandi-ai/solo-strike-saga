@@ -56,9 +56,9 @@ export function Player() {
 
       if (t.train) {
         const lead = trainCars[0]!;
-        runtime.ridingTrain = 0;
-        pos.set(lead.x, TRAIN_Y + 0.5, lead.z);
-        height.current = TRAIN_Y + 0.5;
+        runtime.ridingTrain = -1;
+        pos.set(lead.x, TRAIN_ROOF, lead.z);
+        height.current = TRAIN_ROOF;
         look.yaw = lead.yaw;
       } else {
         runtime.ridingTrain = -1;
@@ -281,7 +281,7 @@ export function Player() {
       moveWithCollision(pos, MOVE.x, MOVE.z, 0.45, height.current);
     }
     let floor = groundAt(pos.x, pos.z, height.current);
-    if (height.current >= TRAIN_ROOF - 0.8 && carUnder(pos.x, pos.z) >= 0) floor = Math.max(floor, TRAIN_ROOF);
+    if (height.current >= TRAIN_ROOF - 1.5 && carUnder(pos.x, pos.z) >= 0) floor = Math.max(floor, TRAIN_ROOF);
     const onGround = height.current <= floor + 0.001;
     if (k.has("Space") && onGround && vy.current <= 0) vy.current = 7.2;
     vy.current -= GRAVITY * dt;
@@ -294,7 +294,7 @@ export function Player() {
     floor = groundAt(pos.x, pos.z, Math.max(height.current, floor));
 
     const car = carUnder(pos.x, pos.z);
-    if (car >= 0 && height.current >= TRAIN_ROOF - 0.8 && vy.current <= 0) {
+    if (car >= 0 && height.current >= TRAIN_ROOF - 1.5 && height.current <= TRAIN_ROOF + 1.1 && vy.current <= 0) {
       floor = Math.max(floor, TRAIN_ROOF);
       const pc = prevCars[car]!, nc = trainCars[car]!;
       if (height.current <= TRAIN_ROOF + 0.05) {
