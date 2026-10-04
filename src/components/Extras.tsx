@@ -129,7 +129,7 @@ export function MaglevTrain() {
     <group>
       {Array.from({ length: TRAIN_CARS }, (_, i) => (
         <group key={i} ref={(el) => { refs.current[i] = el; }}>
-          <mesh position={[0, CAR_H / 2 + 0.18, 0]} castShadow>
+          <mesh position={[0, CAR_H / 2 + 0.18, 0]} rotation-x={Math.PI / 2} castShadow>
             <capsuleGeometry args={[CAR_W / 2, CAR_LEN - CAR_W, 5, 12]} />
             <meshStandardMaterial color={i === 0 ? "#d8dde1" : "#c6ccd1"} metalness={0.65} roughness={0.28} />
           </mesh>
@@ -151,6 +151,68 @@ export function MaglevTrain() {
           )}
         </group>
       ))}
+    </group>
+  );
+}
+
+const AIRCRAFT_SPOTS = [
+  [540, -430, 0],
+  [640, -430, Math.PI],
+  [590, -600, 0],
+  [700, -600, Math.PI],
+] as const;
+
+function Aircraft({ x, z, yaw }: { x: number; z: number; yaw: number }) {
+  return (
+    <group position={[x, 0.65, z]} rotation-y={yaw}>
+      <mesh position={[0, 3, 0]} rotation-z={-Math.PI / 2} castShadow>
+        <capsuleGeometry args={[1.55, 24, 6, 14]} />
+        <meshStandardMaterial color="#d8dce0" metalness={0.35} roughness={0.42} />
+      </mesh>
+      <mesh position={[13.4, 3, 0]} rotation-z={-Math.PI / 2} castShadow>
+        <coneGeometry args={[1.5, 4.8, 14]} />
+        <meshStandardMaterial color="#e5e7e9" metalness={0.3} roughness={0.38} />
+      </mesh>
+      <mesh position={[8.7, 3.65, 0]} rotation-z={-Math.PI / 2}>
+        <capsuleGeometry args={[0.7, 3.2, 4, 10]} />
+        <meshStandardMaterial color="#273844" metalness={0.55} roughness={0.2} />
+      </mesh>
+      <mesh position={[0.5, 2.9, 0]} castShadow>
+        <boxGeometry args={[7, 0.32, 28]} />
+        <meshStandardMaterial color="#b9bec3" metalness={0.38} roughness={0.46} />
+      </mesh>
+      <mesh position={[-10.4, 5.4, 0]} castShadow>
+        <boxGeometry args={[4.8, 4.8, 0.35]} />
+        <meshStandardMaterial color="#aeb4b9" metalness={0.3} roughness={0.5} />
+      </mesh>
+      <mesh position={[-10.3, 3.4, 0]} castShadow>
+        <boxGeometry args={[4.6, 0.25, 10]} />
+        <meshStandardMaterial color="#b9bec3" metalness={0.3} roughness={0.5} />
+      </mesh>
+      {[-1, 1].map((side) => (
+        <group key={side} position={[-1, 1.05, side * 2.2]}>
+          <mesh rotation-x={Math.PI / 2} castShadow>
+            <cylinderGeometry args={[0.42, 0.42, 0.24, 12]} />
+            <meshStandardMaterial color="#202326" roughness={0.9} />
+          </mesh>
+        </group>
+      ))}
+      <mesh position={[10, 1.05, 0]} rotation-z={Math.PI / 2} castShadow>
+        <cylinderGeometry args={[0.38, 0.38, 0.24, 12]} />
+        <meshStandardMaterial color="#202326" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 3.15, 1.56]}>
+        <boxGeometry args={[18, 0.22, 0.08]} />
+        <meshStandardMaterial color="#3d5967" emissive="#3d5967" emissiveIntensity={0.2} />
+      </mesh>
+    </group>
+  );
+}
+
+export function AirportAircraft() {
+  return (
+    <group>
+      {AIRCRAFT_SPOTS.map(([x, z, yaw]) => <Aircraft key={`${x}-${z}`} x={x} z={z} yaw={yaw} />)}
     </group>
   );
 }

@@ -10,7 +10,7 @@ import { Ground, Structures } from "./Terrain";
 import { Tracers } from "./Tracers";
 import { BattleBus } from "./BattleBus";
 import { ViewModel } from "./ViewModel";
-import { GliderAvatar, LaunchPads, MaglevTrain, Vehicles } from "./Extras";
+import { AirportAircraft, GliderAvatar, LaunchPads, MaglevTrain, Vehicles } from "./Extras";
 import { Zone } from "./Zone";
 import { ZoneController } from "./ZoneController";
 
@@ -58,6 +58,7 @@ export function GameCanvas() {
           <Vehicles />
           <GliderAvatar />
           <MaglevTrain />
+          <AirportAircraft />
         </Suspense>
         <Zone />
         <ZoneController />
