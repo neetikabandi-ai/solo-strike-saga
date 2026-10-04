@@ -129,24 +129,24 @@ export function MaglevTrain() {
     <group>
       {Array.from({ length: TRAIN_CARS }, (_, i) => (
         <group key={i} ref={(el) => { refs.current[i] = el; }}>
-          <mesh position={[0, CAR_H / 2 + 0.3, 0]}>
-            <boxGeometry args={[CAR_W, CAR_H - 0.3, CAR_LEN]} />
-            <meshStandardMaterial color={i === 0 ? "#1e2235" : "#161a28"} metalness={0.6} roughness={0.35} />
+          <mesh position={[0, CAR_H / 2 + 0.18, 0]} castShadow>
+            <capsuleGeometry args={[CAR_W / 2, CAR_LEN - CAR_W, 5, 12]} />
+            <meshStandardMaterial color={i === 0 ? "#d8dde1" : "#c6ccd1"} metalness={0.65} roughness={0.28} />
           </mesh>
-          <mesh position={[0, 0.2, 0]}>
-            <boxGeometry args={[CAR_W - 0.4, 0.15, CAR_LEN - 0.6]} />
-            <meshBasicMaterial color="#22d3ee" toneMapped={false} />
+          <mesh position={[0, CAR_H * 0.68, 0]}>
+            <boxGeometry args={[CAR_W + 0.04, 0.75, CAR_LEN - 2.2]} />
+            <meshStandardMaterial color="#25313a" metalness={0.7} roughness={0.18} />
           </mesh>
           {[-1, 1].map((sd) => (
             <mesh key={sd} position={[sd * (CAR_W / 2 + 0.01), CAR_H * 0.6, 0]}>
               <boxGeometry args={[0.04, 0.5, CAR_LEN - 1]} />
-              <meshBasicMaterial color={i === 0 ? "#facc15" : "#f0abfc"} toneMapped={false} />
+              <meshStandardMaterial color="#315b69" emissive="#315b69" emissiveIntensity={0.25} />
             </mesh>
           ))}
           {i === 0 && (
             <mesh position={[0, CAR_H * 0.55, CAR_LEN / 2 + 0.02]}>
               <boxGeometry args={[CAR_W - 0.6, 0.5, 0.05]} />
-              <meshBasicMaterial color="#ffffff" toneMapped={false} />
+              <meshStandardMaterial color="#f3f0d6" emissive="#f3f0d6" emissiveIntensity={0.8} />
             </mesh>
           )}
         </group>
