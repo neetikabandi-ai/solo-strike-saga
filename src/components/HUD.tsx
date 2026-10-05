@@ -31,6 +31,9 @@ function Minimap() {
         for (const pd of PADS) ctx.fillRect(m(pd.x) - 1.5, m(pd.z) - 1.5, 3, 3);
         ctx.fillStyle = "#f97316";
         for (const v of runtime.vehicles) ctx.fillRect(m(v.x) - 2, m(v.z) - 2, 4, 4);
+        for (const v of runtime.transit) { ctx.fillStyle = v.kind === "bus" ? "#60a5fa" : "#fde047"; ctx.fillRect(m(v.x) - 1.5, m(v.z) - 1.5, 3, 3); }
+        ctx.fillStyle = "#f43f5e";
+        for (const a of runtime.aircraft) ctx.fillRect(m(a.x) - 2, m(a.z) - 2, 4, 4);
         const p = runtime.player;
         ctx.save();
         ctx.translate(m(p.x), m(p.z));
@@ -63,8 +66,8 @@ const STRUCTURES = [
 ];
 
 function TeleportMenu({ onClose }: { onClose: () => void }) {
-  const go = (x: number, z: number, train = false) => {
-    runtime.teleport = { x, z, train };
+  const go = (x: number, z: number, train = false, ride?: "bus" | "taxi") => {
+    runtime.teleport = { x, z, train, ride };
     onClose();
   };
 
@@ -92,6 +95,8 @@ function TeleportMenu({ onClose }: { onClose: () => void }) {
         <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground text-cyan-400">Live Transports</h3>
         <div className="mb-5 grid grid-cols-1 sm:grid-cols-2">
           <Btn d={{ name: "Train Roof", x: 0, z: 0 }} train={true} />
+          <button onClick={() => go(0, 0, false, "bus")} className="rounded border border-border bg-secondary px-3 py-2 text-left text-sm font-bold">Nearest Bus</button>
+          <button onClick={() => go(0, 0, false, "taxi")} className="rounded border border-border bg-secondary px-3 py-2 text-left text-sm font-bold">Nearest Taxi</button>
         </div>
 
         <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground">Districts</h3>
