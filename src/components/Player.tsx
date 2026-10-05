@@ -4,7 +4,8 @@ import * as THREE from "three";
 import { keys, look, mouse, pressed } from "../lib/input";
 import { addTracer, BUS_ALT, busPos, carUnder, hurtBot, runtime, trainCars, TRAIN_ROOF, TRAIN_Y, updateTrain, type Chest } from "../lib/runtime";
 import { clampMap, collides, findFree, groundAt, PADS, moveWithCollision, rayBlocked, raySphere } from "../lib/world";
-import { RARITY, rollWeapon, WEAPONS } from "../lib/weapons";
+import { chestLoot, WEAPONS } from "../lib/weapons";
+import { NUKE_COOLDOWN, NUKE_RADIUS, updateTransit } from "../lib/fleet";
 import { STORM_DPS, useGameStore } from "../store/useGameStore";
 
 const WALK = 6;
@@ -35,6 +36,7 @@ export function Player() {
   const zoneTick = useRef(0);
   const recoil = useRef(0);
   const bobT = useRef(0);
+  const burstLeft = useRef(0);
 
   useFrame(({ camera, clock }, rawDelta) => {
     const dt = Math.min(rawDelta, 0.05);
@@ -47,14 +49,30 @@ export function Player() {
     if (phase === "bus" || phase === "dive" || phase === "playing") runtime.clock += dt;
     const prevCars = trainCars.map((c) => ({ ...c }));
     updateTrain(phase === "menu" ? clock.elapsedTime : runtime.clock);
+    updateTransit(runtime.transit, phase === "menu" ? clock.elapsedTime : runtime.clock);
 
     // ---- teleport menu request -----------------------------------
     if (runtime.teleport && (phase === "playing" || phase === "dive" || phase === "bus")) {
       const t = runtime.teleport;
       runtime.teleport = null;
       runtime.driving = -1;
+      runtime.piloting = -1;
+      runtime.riding = -1;
 
-      if (t.train) {
+      if (t.ride) {
+        let best = -1, bd = Infinity;
+        for (const v of runtime.transit) {
+          if (v.kind !== t.ride) continue;
+          const d = Math.hypot(v.x - pos.x, v.z - pos.z);
+          if (d < bd) { bd = d; best = v.id; }
+        }
+        runtime.ridingTrain = -1;
+        runtime.riding = best;
+        const v = runtime.transit[best]!;
+        pos.set(v.x, 0, v.z);
+        height.current = 0;
+        look.yaw = v.yaw;
+      } else if (t.train) {
         const lead = trainCars[0]!;
         runtime.ridingTrain = -1;
         pos.set(lead.x, TRAIN_ROOF, lead.z);
@@ -207,6 +225,115 @@ export function Player() {
     }
 
     if (phase !== "playing") {
+      pressed.clear();
+      mouse.clicked = false;
+      return;
+    }
+
+    // ---- nukes in flight -----------------------------------------
+    runtime.nukeCd -= dt;
+    for (let i = runtime.bombs.length - 1; i >= 0; i--) {
+      const b = runtime.bombs[i]!;
+      b.vy -= GRAVITY * dt;
+      b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt;
+      const g = groundAt(b.x, b.z, b.y + 1);
+      if (b.y <= g || b.y <= 0) {
+        runtime.bombs.splice(i, 1);
+        runtime.blasts.push({ x: b.x, y: Math.max(g, 0), z: b.z, life: 1.4 });
+        for (const bot of runtime.bots) {
+          if (!bot.alive || !bot.landed) continue;
+          if (Math.hypot(bot.pos.x - b.x, bot.pos.z - b.z) < NUKE_RADIUS && hurtBot(bot, 9999)) store.addKill(bot.name);
+        }
+        if (runtime.piloting < 0 && Math.hypot(pos.x - b.x, height.current - b.y, pos.z - b.z) < NUKE_RADIUS) store.damage(80);
+      }
+    }
+    for (let i = runtime.blasts.length - 1; i >= 0; i--) {
+      runtime.blasts[i]!.life -= dt;
+      if (runtime.blasts[i]!.life <= 0) runtime.blasts.splice(i, 1);
+    }
+
+    // ---- flying a jet / helicopter -------------------------------
+    if (runtime.piloting >= 0) {
+      const a = runtime.aircraft[runtime.piloting]!;
+      const jet = a.kind === "jet";
+      a.yaw = look.yaw;
+      a.pitch = THREE.MathUtils.clamp(look.pitch, -0.9, 0.9);
+      if (jet) {
+        const max = k.has("ShiftLeft") ? 110 : 75;
+        if (fwd > 0) a.speed = Math.min(max, a.speed + 25 * dt);
+        else if (fwd < 0) a.speed = Math.max(0, a.speed - 30 * dt);
+        a.yaw -= strafe * 0.9 * dt;
+        look.yaw = a.yaw;
+        const lift = a.speed > 28 ? 1 : 0;
+        a.x += -Math.sin(a.yaw) * Math.cos(a.pitch) * a.speed * dt;
+        a.z += -Math.cos(a.yaw) * Math.cos(a.pitch) * a.speed * dt;
+        a.y += (lift ? Math.sin(a.pitch) * a.speed : -6) * dt;
+      } else {
+        const sp = 32;
+        MOVE.set(0, 0, 0).addScaledVector(FORWARD, fwd).addScaledVector(RIGHT, strafe);
+        if (MOVE.lengthSq() > 0) MOVE.normalize();
+        a.speed = MOVE.length() * sp;
+        a.x += MOVE.x * sp * dt;
+        a.z += MOVE.z * sp * dt;
+        a.y += ((k.has("ShiftLeft") ? 1 : 0) - (k.has("ControlLeft") || k.has("KeyC") ? 1 : 0)) * 18 * dt;
+      }
+      a.x = clampMap(a.x); a.z = clampMap(a.z);
+      a.y = Math.min(320, a.y);
+      const g = groundAt(a.x, a.z, a.y + 1, 2);
+      if (a.y < g) { a.y = g; if (jet) a.speed *= Math.exp(-2 * dt); }
+      pos.set(a.x, a.y, a.z);
+      height.current = a.y;
+      runtime.altitude = a.y;
+      runtime.view.ads = false;
+      const back = jet ? 22 : 16;
+      cam.position.set(a.x - AIM.x * back, a.y + (jet ? 6 : 5) - AIM.y * back, a.z - AIM.z * back);
+      cam.lookAt(a.x + AIM.x * 10, a.y + 2 + AIM.y * 10, a.z + AIM.z * 10);
+      setFov(80 + a.speed * 0.12);
+      const pr = jet ? "W/S throttle · A/D turn · Shift boost · SPACE nuke · E eject" : "WASD move · Shift up · C down · SPACE nuke · E eject";
+      if (store.prompt !== pr) set({ prompt: pr });
+      if (pressed.has("Space") && runtime.nukeCd <= 0) {
+        runtime.nukeCd = NUKE_COOLDOWN;
+        const vx = jet ? -Math.sin(a.yaw) * a.speed : MOVE.x * 32;
+        const vz = jet ? -Math.cos(a.yaw) * a.speed : MOVE.z * 32;
+        runtime.bombs.push({ x: a.x, y: a.y - 1.5, z: a.z, vx: vx * 0.8, vy: -4, vz: vz * 0.8 });
+      }
+      if (pressed.has("KeyE")) {
+        runtime.piloting = -1;
+        a.speed = 0;
+        const gy = groundAt(a.x, a.z, a.y + 0.5);
+        set({ prompt: null });
+        if (a.y - gy > 6) {
+          height.current = a.y - 2;
+          set({ phase: "dive" });
+        } else {
+          const spot = gy <= 0.1 ? findFree(a.x + 4, a.z, 0.6) : { x: a.x + 3, z: a.z };
+          pos.set(spot.x, gy, spot.z);
+          height.current = gy;
+        }
+      }
+      pressed.clear();
+      mouse.clicked = false;
+      return;
+    }
+
+    // ---- riding a bus / taxi -------------------------------------
+    if (runtime.riding >= 0) {
+      const v = runtime.transit[runtime.riding]!;
+      pos.set(v.x, 0, v.z);
+      height.current = 0;
+      runtime.view.ads = false;
+      const back = v.kind === "bus" ? 14 : 9;
+      cam.position.set(v.x - AIM.x * back, 5 - AIM.y * back * 0.5, v.z - AIM.z * back);
+      cam.lookAt(v.x + AIM.x * 6, 2, v.z + AIM.z * 6);
+      setFov(78);
+      const pr = `Riding ${v.kind} · Press E to get off`;
+      if (store.prompt !== pr) set({ prompt: pr });
+      if (pressed.has("KeyE")) {
+        runtime.riding = -1;
+        const spot = findFree(v.x + Math.cos(v.yaw) * 3, v.z - Math.sin(v.yaw) * 3, 0.6);
+        pos.set(spot.x, 0, spot.z);
+        set({ prompt: null });
+      }
       pressed.clear();
       mouse.clicked = false;
       return;
@@ -376,6 +503,11 @@ export function Player() {
     let nearCar = -1;
     for (const v of runtime.vehicles) if (Math.hypot(v.x - pos.x, v.z - pos.z) < 3.5) nearCar = v.id;
 
+    let nearAir = -1;
+    for (const a of runtime.aircraft) if (Math.hypot(a.x - pos.x, a.z - pos.z) < (a.kind === "jet" ? 7 : 6) && Math.abs(a.y - height.current) < 3.5) nearAir = a.id;
+    let nearRide = -1;
+    if (height.current < 2) for (const v of runtime.transit) if (Math.hypot(v.x - pos.x, v.z - pos.z) < (v.kind === "bus" ? 6 : 4)) nearRide = v.id;
+
     let nearTrainCar = -1;
     for (let i = 0; i < trainCars.length; i++) {
       const tc = trainCars[i]!;
@@ -390,13 +522,29 @@ export function Player() {
       ? "Press F to open chest" 
       : nearTrainCar >= 0 
         ? "Press E to board train" 
-        : nearCar >= 0 
-          ? "Press E to drive" 
-          : null;
+        : nearAir >= 0
+          ? `Press E to fly ${runtime.aircraft[nearAir]!.kind === "jet" ? "jet" : "helicopter"}`
+          : nearRide >= 0
+            ? `Press E to ride ${runtime.transit[nearRide]!.kind}`
+            : nearCar >= 0
+              ? "Press E to drive"
+              : null;
 
     if (prompt !== store.prompt) set({ prompt });
 
-    if (nearTrainCar >= 0 && pressed.has("KeyE")) {
+    if (nearAir >= 0 && pressed.has("KeyE")) {
+      cancelActions();
+      runtime.piloting = nearAir;
+      const a = runtime.aircraft[nearAir]!;
+      look.yaw = a.yaw;
+      look.pitch = 0;
+      set({ prompt: null });
+    } else if (nearRide >= 0 && pressed.has("KeyE")) {
+      cancelActions();
+      runtime.riding = nearRide;
+      look.yaw = runtime.transit[nearRide]!.yaw;
+      set({ prompt: null });
+    } else if (nearTrainCar >= 0 && pressed.has("KeyE")) {
       cancelActions();
       runtime.ridingTrain = nearTrainCar;
       look.yaw = trainCars[nearTrainCar]!.yaw;
@@ -412,25 +560,17 @@ export function Player() {
       near.opened = true;
       runtime.chestVersion++;
       const cur = useGameStore.getState();
-      const loot = rollWeapon();
-      const slots = [...cur.slots];
-      const empty = slots.indexOf(null);
-      const idx = empty >= 0 ? empty : cur.slot;
-      if (idx === cur.slot) cancelActions();
-      slots[idx] = loot;
-      const ammo = { ...cur.ammo, [loot.kind]: cur.ammo[loot.kind] + WEAPONS[loot.kind].mag * 2 };
+      const res = chestLoot(cur.slots, cur.slot);
+      if (res.slots[cur.slot] !== cur.slots[cur.slot]) cancelActions();
+      const ammo = { ...cur.ammo };
+      if (res.ammoKind) ammo[res.ammoKind] += WEAPONS[res.ammoKind].mag * 2;
       const potions = { ...cur.potions };
       const extras: string[] = [];
-      if (Math.random() < 0.6) {
-        potions.shield++;
-        extras.push("Shield Potion");
-      }
-      if (Math.random() < 0.3) {
-        potions.med++;
-        extras.push("Medkit");
-      }
-      set({ slots, ammo, potions });
-      cur.pushFeed(`Chest: ${RARITY[loot.rarity]!.name} ${WEAPONS[loot.kind].name}${extras.length ? " + " + extras.join(" + ") : ""}`);
+      const maxed = res.text.startsWith("Loadout maxed");
+      if (maxed || Math.random() < 0.6) { potions.shield++; extras.push("Shield Potion"); }
+      if (maxed || Math.random() < 0.3) { potions.med++; extras.push("Medkit"); }
+      set({ slots: res.slots, ammo, potions });
+      cur.pushFeed(`Chest: ${res.text}${extras.length ? " + " + extras.join(" + ") : ""}`);
     }
 
     // ---- shooting ------------------------------------------------
@@ -448,14 +588,19 @@ export function Player() {
             set({ slots, ammo: { ...cur.ammo, [cw.kind]: cur.ammo[cw.kind] - take }, reloading: false });
           }
         }
-      } else if ((pressed.has("KeyR") || w.mag === 0) && w.mag < spec.mag && store.ammo[w.kind] > 0 && useT.current <= 0) {
+      } else if ((pressed.has("KeyR") || w.mag === 0) && (burstLeft.current = 0) === 0 && w.mag < spec.mag && store.ammo[w.kind] > 0 && useT.current <= 0) {
         reloadT.current = spec.reload;
         set({ reloading: true });
       }
 
       const trigger = spec.auto ? mouse.firing : mouse.clicked;
-      if (trigger && fireCd.current <= 0 && w.mag > 0 && reloadT.current <= 0 && useT.current <= 0) {
-        fireCd.current = spec.interval;
+      const bursting = burstLeft.current > 0;
+      if ((trigger || bursting) && fireCd.current <= 0 && w.mag > 0 && reloadT.current <= 0 && useT.current <= 0) {
+        if (spec.burst) {
+          if (!bursting) burstLeft.current = spec.burst;
+          burstLeft.current--;
+          fireCd.current = burstLeft.current > 0 ? 0.07 : spec.interval;
+        } else fireCd.current = spec.interval;
         const slots = [...store.slots];
         slots[store.slot] = { ...w, mag: w.mag - 1 };
         set({ slots });
