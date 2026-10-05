@@ -54,7 +54,7 @@ function initial(): Data {
     shield: 0,
     slots: [{ kind: "ar", rarity: 2, mag: 30 }, null, null],
     slot: 0,
-    ammo: { ar: 150, smg: 60, shotgun: 12, sniper: 6 },
+    ammo: { ar: 150, smg: 60, shotgun: 12, sniper: 6, burst: 72, handcannon: 21, dmr: 30 },
     potions: { shield: 2, med: 1 },
     reloading: false,
     using: null,
