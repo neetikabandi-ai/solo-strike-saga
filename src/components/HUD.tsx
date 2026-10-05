@@ -67,7 +67,7 @@ const STRUCTURES = [
 
 function TeleportMenu({ onClose }: { onClose: () => void }) {
   const go = (x: number, z: number, train = false, ride?: "bus" | "taxi") => {
-    runtime.teleport = { x, z, train, ride };
+    runtime.teleport = ride ? { x, z, train, ride } : { x, z, train };
     onClose();
   };
 
