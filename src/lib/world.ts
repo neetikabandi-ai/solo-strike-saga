@@ -530,6 +530,17 @@ function build() {
 
 const WORLD = build();
 export const OBSTACLES: Box[] = WORLD.boxes;
+/** The tallest skyscraper roofs (helipads + beacons), well spread apart. */
+export const TOWER_TOPS: { x: number; z: number; y: number }[] = (() => {
+  const out: { x: number; z: number; y: number }[] = [];
+  const towers = OBSTACLES.filter((b) => b.kind === "tower").sort((a, b) => b.y0 + b.h - (a.y0 + a.h));
+  for (const t of towers) {
+    if (out.some((o) => Math.hypot(o.x - t.x, o.z - t.z) < 120)) continue;
+    out.push({ x: t.x, z: t.z, y: t.y0 + t.h });
+    if (out.length >= 10) break;
+  }
+  return out;
+})();
 export const NEON: Neon[] = WORLD.neon;
 export const LAMPS: Lamp[] = WORLD.lamps;
 export const TREES = WORLD.trees;
