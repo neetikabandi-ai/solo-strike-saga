@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { keys, look, mouse, pressed } from "../lib/input";
 import { addTracer, BUS_ALT, busPos, carUnder, hurtBot, runtime, trainCars, TRAIN_ROOF, TRAIN_Y, updateTrain, type Chest } from "../lib/runtime";
 import { clampMap, collides, findFree, groundAt, PADS, moveWithCollision, rayBlocked, raySphere } from "../lib/world";
-import { chestLoot, WEAPONS } from "../lib/weapons";
+import { chestLoot, RARITY, WEAPONS } from "../lib/weapons";
 import { NUKE_COOLDOWN, NUKE_RADIUS, updateTransit } from "../lib/fleet";
 import { STORM_DPS, useGameStore } from "../store/useGameStore";
 
