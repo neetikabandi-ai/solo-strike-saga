@@ -33,7 +33,16 @@ function Minimap() {
         for (const v of runtime.vehicles) ctx.fillRect(m(v.x) - 2, m(v.z) - 2, 4, 4);
         for (const v of runtime.transit) { ctx.fillStyle = v.kind === "bus" ? "#60a5fa" : "#fde047"; ctx.fillRect(m(v.x) - 1.5, m(v.z) - 1.5, 3, 3); }
         ctx.fillStyle = "#f43f5e";
-        for (const a of runtime.aircraft) ctx.fillRect(m(a.x) - 2, m(a.z) - 2, 4, 4);
+        for (const a of runtime.aircraft) {
+          ctx.fillStyle = a.kind === "heli" ? "#34d399" : "#f43f5e";
+          if (a.kind === "heli") {
+            ctx.beginPath();
+            ctx.arc(m(a.x), m(a.z), 2.5, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            ctx.fillRect(m(a.x) - 2, m(a.z) - 2, 4, 4);
+          }
+        }
         const p = runtime.player;
         ctx.save();
         ctx.translate(m(p.x), m(p.z));
@@ -70,6 +79,10 @@ function TeleportMenu({ onClose }: { onClose: () => void }) {
     runtime.teleport = ride ? { x, z, train, ride } : { x, z, train };
     onClose();
   };
+  const goAircraft = (aircraft: "jet" | "heli") => {
+    runtime.teleport = { x: runtime.player.x, z: runtime.player.z, aircraft };
+    onClose();
+  };
 
   const Btn = ({ d, train = false }: { d: { name: string; x: number; z: number }; train?: boolean }) => (
     <button
@@ -97,6 +110,8 @@ function TeleportMenu({ onClose }: { onClose: () => void }) {
           <Btn d={{ name: "Train Roof", x: 0, z: 0 }} train={true} />
           <button onClick={() => go(0, 0, false, "bus")} className="rounded border border-border bg-secondary px-3 py-2 text-left text-sm font-bold">Nearest Bus</button>
           <button onClick={() => go(0, 0, false, "taxi")} className="rounded border border-border bg-secondary px-3 py-2 text-left text-sm font-bold">Nearest Taxi</button>
+          <button onClick={() => goAircraft("jet")} className="rounded border border-border bg-secondary px-3 py-2 text-left text-sm font-bold">Nearest Jet</button>
+          <button onClick={() => goAircraft("heli")} className="rounded border border-border bg-secondary px-3 py-2 text-left text-sm font-bold">Nearest Helicopter</button>
         </div>
 
         <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground">Districts</h3>

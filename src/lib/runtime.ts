@@ -52,7 +52,7 @@ export const runtime = {
   vehicles: [] as Vehicle[],
   driving: -1,
   ridingTrain: -1,
-  teleport: null as null | { x: number; z: number; train?: boolean; ride?: "bus" | "taxi" },
+  teleport: null as null | { x: number; z: number; train?: boolean; ride?: "bus" | "taxi"; aircraft?: "jet" | "heli" },
   aircraft: makeAircraft() as Aircraft[],
   piloting: -1,
   transit: makeTransit() as Transit[],
