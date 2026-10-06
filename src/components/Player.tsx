@@ -72,6 +72,14 @@ export function Player() {
         pos.set(v.x, 0, v.z);
         height.current = 0;
         look.yaw = v.yaw;
+      } else if (t.aircraft !== undefined) {
+        const aircraft = runtime.aircraft[t.aircraft];
+        if (aircraft) {
+          runtime.ridingTrain = -1;
+          pos.set(aircraft.x, aircraft.y, aircraft.z);
+          height.current = aircraft.y;
+          look.yaw = aircraft.yaw;
+        }
       } else if (t.train) {
         const lead = trainCars[0]!;
         runtime.ridingTrain = -1;
@@ -289,7 +297,9 @@ export function Player() {
       cam.position.set(a.x - AIM.x * back, a.y + (jet ? 6 : 5) - AIM.y * back, a.z - AIM.z * back);
       cam.lookAt(a.x + AIM.x * 10, a.y + 2 + AIM.y * 10, a.z + AIM.z * 10);
       setFov(80 + a.speed * 0.12);
-      const pr = jet ? "W/S throttle · A/D turn · Shift boost · SPACE nuke · E eject" : "WASD move · Shift up · C down · SPACE nuke · E eject";
+      const pr = jet
+        ? "W/S throttle · A/D turn · mouse pitch · Shift boost · SPACE drop nuke · E eject"
+        : "W/S forward · A/D strafe · mouse turn · Shift rise · C descend · SPACE drop nuke · E eject";
       if (store.prompt !== pr) set({ prompt: pr });
       if (pressed.has("Space") && runtime.nukeCd <= 0) {
         runtime.nukeCd = NUKE_COOLDOWN;
