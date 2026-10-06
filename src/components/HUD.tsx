@@ -79,7 +79,7 @@ function TeleportMenu({ onClose }: { onClose: () => void }) {
     runtime.teleport = ride ? { x, z, train, ride } : { x, z, train };
     onClose();
   };
-  const goAircraft = (aircraft: "jet" | "heli") => {
+  const goAircraft = (aircraft: number) => {
     runtime.teleport = { x: runtime.player.x, z: runtime.player.z, aircraft };
     onClose();
   };
@@ -110,8 +110,19 @@ function TeleportMenu({ onClose }: { onClose: () => void }) {
           <Btn d={{ name: "Train Roof", x: 0, z: 0 }} train={true} />
           <button onClick={() => go(0, 0, false, "bus")} className="rounded border border-border bg-secondary px-3 py-2 text-left text-sm font-bold">Nearest Bus</button>
           <button onClick={() => go(0, 0, false, "taxi")} className="rounded border border-border bg-secondary px-3 py-2 text-left text-sm font-bold">Nearest Taxi</button>
-          <button onClick={() => goAircraft("jet")} className="rounded border border-border bg-secondary px-3 py-2 text-left text-sm font-bold">Nearest Jet</button>
-          <button onClick={() => goAircraft("heli")} className="rounded border border-border bg-secondary px-3 py-2 text-left text-sm font-bold">Nearest Helicopter</button>
+        </div>
+        <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground">Aircraft · Skyport jets and rooftop helicopters</h3>
+        <div className="mb-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {runtime.aircraft.map((aircraft, i) => (
+            <button
+              key={aircraft.id}
+              onClick={() => goAircraft(i)}
+              className="rounded border border-border bg-secondary px-3 py-2 text-left text-sm hover:bg-primary hover:text-primary-foreground transition-colors"
+            >
+              <span className="font-bold">{aircraft.kind === "heli" ? `Helicopter ${i - 4}` : `Jet ${i + 1}`}</span>
+              <span className="ml-2 text-xs opacity-70">({Math.round(aircraft.x)}, {Math.round(aircraft.z)})</span>
+            </button>
+          ))}
         </div>
 
         <h3 className="mb-2 text-xs font-bold uppercase text-muted-foreground">Districts</h3>
@@ -161,6 +172,7 @@ export function HUD() {
             <li>Mouse look · Left click fire · Right click aim · R reload</li>
             <li>1-3 weapons · 4 shield potion · 5 medkit · F open chest</li>
             <li>E enter/exit car or train · Yellow pads launch you into the sky</li>
+            <li>E fly aircraft · Jet: W/S throttle, A/D turn · Helicopter: WASD, Shift/C altitude · Space drop nuke</li>
             <li>M teleport menu · Ride the maglev train roof</li>
           </ul>
           <button

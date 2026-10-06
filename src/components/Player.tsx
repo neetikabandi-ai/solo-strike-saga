@@ -72,22 +72,13 @@ export function Player() {
         pos.set(v.x, 0, v.z);
         height.current = 0;
         look.yaw = v.yaw;
-      } else if (t.aircraft) {
-        let closest: (typeof runtime.aircraft)[number] | undefined;
-        let closestDistance = Infinity;
-        for (const aircraft of runtime.aircraft) {
-          if (aircraft.kind !== t.aircraft) continue;
-          const distance = Math.hypot(aircraft.x - pos.x, aircraft.z - pos.z);
-          if (distance < closestDistance) {
-            closest = aircraft;
-            closestDistance = distance;
-          }
-        }
-        if (closest) {
+      } else if (t.aircraft !== undefined) {
+        const aircraft = runtime.aircraft[t.aircraft];
+        if (aircraft) {
           runtime.ridingTrain = -1;
-          pos.set(closest.x + 3.5, closest.y, closest.z);
-          height.current = closest.y;
-          look.yaw = closest.yaw;
+          pos.set(aircraft.x, aircraft.y, aircraft.z);
+          height.current = aircraft.y;
+          look.yaw = aircraft.yaw;
         }
       } else if (t.train) {
         const lead = trainCars[0]!;
