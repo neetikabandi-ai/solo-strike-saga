@@ -1,6 +1,9 @@
 import * as THREE from "three";
 import { CHEST_SPOTS, clampMap, findFree, LOOP, POIS, TRAIN_Y, VEHICLE_SPOTS } from "./world";
+import { makeAircraft, makeTransit, type Aircraft, type Blast, type Bomb, type Transit } from "./fleet";
 import { TOTAL_BOTS } from "../store/useGameStore";
+
+export { TRAIN_Y };
 
 export type Bot = {
   id: number;
@@ -49,7 +52,14 @@ export const runtime = {
   vehicles: [] as Vehicle[],
   driving: -1,
   ridingTrain: -1,
-  teleport: null as null | { x: number; z: number; train?: boolean },
+  teleport: null as null | { x: number; z: number; train?: boolean; ride?: "bus" | "taxi"; aircraft?: number },
+  aircraft: makeAircraft() as Aircraft[],
+  piloting: -1,
+  transit: makeTransit() as Transit[],
+  riding: -1,
+  bombs: [] as Bomb[],
+  blasts: [] as Blast[],
+  nukeCd: 0,
   tpOpen: false,
   bus: { sx: 0, sz: 0, ex: 0, ez: 0, dur: 30, yaw: 0 },
 };
@@ -88,6 +98,11 @@ export function initRun() {
   runtime.vehicles = VEHICLE_SPOTS.map((v, i) => ({ id: i, x: v.x, z: v.z, yaw: v.yaw, speed: 0 }));
   runtime.driving = -1;
   runtime.ridingTrain = -1;
+  runtime.aircraft = makeAircraft();
+  runtime.piloting = -1;
+  runtime.riding = -1;
+  runtime.bombs = [];
+  runtime.blasts = [];
 
   runtime.bots = Array.from({ length: TOTAL_BOTS }, (_, i) => {
     const jump = b.dur * (0.08 + Math.random() * 0.85);
@@ -184,7 +199,9 @@ export function carUnder(x: number, z: number): number {
     const dx = x - c.x, dz = z - c.z;
     const along = Math.abs(dx * Math.sin(c.yaw) + dz * Math.cos(c.yaw));
     const side = Math.abs(dx * Math.cos(c.yaw) - dz * Math.sin(c.yaw));
-    if (along < CAR_LEN / 2 && side < CAR_W / 2) return i;
+    // A little wider/longer than the visible roof so boarding remains reliable
+    // while the train advances between physics frames and rounds a corner.
+    if (along < CAR_LEN / 2 + 0.75 && side < CAR_W / 2 + 0.55) return i;
   }
   return -1;
 }

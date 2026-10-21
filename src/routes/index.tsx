@@ -8,10 +8,11 @@ export const Route = createFileRoute("/")({
       { title: "Zone Royale — Solo Battle Royale vs Bots" },
       {
         name: "description",
-        content: "BGMI-style third-person battle royale: drop in, fight 99 bots, survive the shrinking zone.",
+        content:
+          "Solo battle royale across a dense, layered night city with 99 bots, moving trains, vehicles, and a shrinking storm.",
       },
       { property: "og:title", content: "Zone Royale — Solo Battle Royale" },
-      { property: "og:description", content: "Fight 99 bots in a shrinking zone. Last one standing wins." },
+      { property: "og:description", content: "Fight 99 bots across a dense, layered night city. Last one standing wins." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
