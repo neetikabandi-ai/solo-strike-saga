@@ -135,7 +135,7 @@ export function HUD() {
       <div className="fixed inset-0 z-10 flex items-center justify-center bg-background/60">
         <div className="max-w-md rounded-lg border border-border bg-card p-8 text-center text-card-foreground shadow-xl">
           <h1 className="text-4xl font-black tracking-widest">ZONE ROYALE</h1>
-          <p className="mt-2 text-muted-foreground">Solo vs 15 bots. Stay in the zone. Be the last one standing.</p>
+          <p className="mt-2 text-muted-foreground">Solo vs 99 bots. Stay in the zone. Be the last one standing.</p>
           <ul className="mt-4 space-y-1 text-left text-sm text-muted-foreground">
             <li>WASD move · Shift sprint · C crouch · Space jump</li>
             <li>Mouse look · Left click fire · Right click aim · R reload</li>

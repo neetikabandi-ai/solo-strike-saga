@@ -2,8 +2,8 @@ import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import * as THREE from "three";
 import { keys, look, mouse, pressed } from "../lib/input";
-import { addTracer, BUS_ALT, busPos, carUnder, hurtBot, runtime, trainCars, TRAIN_ROOF, TRAIN_Y, updateTrain, type Chest } from "../lib/runtime";
-import { clampMap, collides, findFree, groundAt, PADS, moveWithCollision, rayBlocked, raySphere } from "../lib/world";
+import { addTracer, BUS_ALT, busPos, carUnder, hurtBot, runtime, trainCars, TRAIN_ROOF, updateTrain, type Chest } from "../lib/runtime";
+import { clampMap, collides, findFree, groundAt, PADS, moveWithCollision, rayBlocked, raySphere, TRAIN_Y } from "../lib/world";
 import { RARITY, rollWeapon, WEAPONS } from "../lib/weapons";
 import { STORM_DPS, useGameStore } from "../store/useGameStore";
 
@@ -43,6 +43,10 @@ export function Player() {
     const cam = camera as THREE.PerspectiveCamera;
     const pos = runtime.player;
     const set = useGameStore.setState;
+    const setFov = (f: number) => {
+      cam.fov += (f - cam.fov) * (1 - Math.exp(-14 * dt));
+      cam.updateProjectionMatrix();
+    };
 
     if (phase === "bus" || phase === "dive" || phase === "playing") runtime.clock += dt;
     const prevCars = trainCars.map((c) => ({ ...c }));
@@ -121,11 +125,6 @@ export function Player() {
     FORWARD.set(-Math.sin(look.yaw), 0, -Math.cos(look.yaw));
     RIGHT.set(Math.cos(look.yaw), 0, -Math.sin(look.yaw));
     runtime.playerYaw = look.yaw;
-
-    const setFov = (f: number) => {
-      cam.fov += (f - cam.fov) * (1 - Math.exp(-14 * dt));
-      cam.updateProjectionMatrix();
-    };
 
     const k = keys;
     const fwd = (k.has("KeyW") ? 1 : 0) - (k.has("KeyS") ? 1 : 0);
