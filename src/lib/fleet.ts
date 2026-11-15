@@ -37,7 +37,7 @@ export const JET_COUNT = 5;
 export const HELI_COUNT = 10;
 export const BUS_COUNT = 20;
 export const TAXI_COUNT = 15;
-export const NUKE_RADIUS = 32;
+export const NUKE_RADIUS = 600;
 export const NUKE_COOLDOWN = 0.6;
 
 const JET_SPOTS = [
