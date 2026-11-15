@@ -2,7 +2,7 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { addTracer, hurtBot, runtime, type Bot } from "../lib/runtime";
-import { clampMap, collides, findFree, MAP_HALF, moveWithCollision, rayBlocked } from "../lib/world";
+import { clampMap, collides, findFree, groundAt, MAP_HALF, moveWithCollision, rayBlocked } from "../lib/world";
 import { applyBotConsumable, BOT_AIRCRAFT_BOARD_RANGE, BOT_CAR_BOARD_RANGE, canBotBoardVehicle, chooseBotConsumable } from "../lib/botActions";
 import { useGameStore } from "../store/useGameStore";
 import { Soldier, type SoldierClip } from "./Soldier";
@@ -203,7 +203,9 @@ export function Bots() {
           const targetX = returning ? aircraft.home.x : bot.dest.x;
           const targetZ = returning ? aircraft.home.z : bot.dest.z;
           const targetAltitude = returning
-            ? aircraft.home.y
+            ? aircraft.kind === "jet"
+              ? aircraft.home.y
+              : groundAt(aircraft.home.x, aircraft.home.z, aircraft.home.y + 2, 1)
             : aircraft.kind === "jet"
               ? 65
               : THREE.MathUtils.clamp(aircraft.home.y, 45, 85);
@@ -223,10 +225,10 @@ export function Bots() {
           aircraft.pitch = THREE.MathUtils.clamp(altitudeDelta * 0.025, -0.45, 0.45);
           bot.pos.set(aircraft.x, aircraft.y, aircraft.z);
           bot.yaw = aircraft.yaw;
-          if (returning && distance < 22 && Math.abs(aircraft.y - aircraft.home.y) < 4) {
+          if (returning && distance < 22 && Math.abs(aircraft.y - targetAltitude) < 4) {
             const spot = findFree(aircraft.x, aircraft.z, 0.8);
             releaseBotVehicle(bot);
-            bot.pos.set(spot.x, 0, spot.z);
+            bot.pos.set(spot.x, targetAltitude, spot.z);
             bot.repath = 0;
           }
         }
@@ -392,7 +394,7 @@ function BotView({ bot }: { bot: Bot }) {
     if (!group.current) return;
     group.current.position.set(bot.pos.x, bot.pos.y, bot.pos.z);
     group.current.rotation.y = bot.yaw;
-    group.current.visible = bot.alive || bot.dying < 6;
+    group.current.visible = !bot.vehicle && (bot.alive || bot.dying < 6);
     const next: SoldierClip = !bot.alive
       ? "die"
       : bot.moving
