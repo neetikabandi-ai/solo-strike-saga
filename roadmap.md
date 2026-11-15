@@ -1,0 +1,3 @@
+- [ ] Let bots board and operate aircraft and cars while staying synchronized with shared vehicle state.
+- [ ] Give bots shield potions and medkits, with safe combat-aware use.
+- [ ] Test bot healing rules and verify the match preview remains healthy.
