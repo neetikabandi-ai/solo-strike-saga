@@ -4,6 +4,7 @@ import { CELL_W, mulberry32, TOWER_TOPS } from "./world";
 export type Aircraft = {
   id: number;
   kind: "jet" | "heli";
+  pilotBotId: number | null;
   x: number;
   y: number;
   z: number;
@@ -52,11 +53,11 @@ export function makeAircraft(): Aircraft[] {
   const list: Aircraft[] = [];
   JET_SPOTS.forEach(([x, z], i) => {
     const home = { x, y: 0.4, z, yaw: Math.PI / 2 };
-    list.push({ id: i, kind: "jet", ...home, pitch: 0, speed: 0, home });
+    list.push({ id: i, kind: "jet", pilotBotId: null, ...home, pitch: 0, speed: 0, home });
   });
   TOWER_TOPS.slice(0, HELI_COUNT).forEach((t, i) => {
     const home = { x: t.x, y: t.y, z: t.z, yaw: 0 };
-    list.push({ id: JET_COUNT + i, kind: "heli", ...home, pitch: 0, speed: 0, home });
+    list.push({ id: JET_COUNT + i, kind: "heli", pilotBotId: null, ...home, pitch: 0, speed: 0, home });
   });
   return list;
 }

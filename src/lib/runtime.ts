@@ -24,10 +24,13 @@ export type Bot = {
   target: number;
   landed: boolean;
   landAt: number;
+  vehicle: null | { kind: "car" | "aircraft"; id: number };
+  medkits: number;
+  shieldPotions: number;
 };
 
 export type Tracer = { id: number; from: THREE.Vector3; to: THREE.Vector3; life: number; hostile: boolean };
-export type Vehicle = { id: number; x: number; z: number; yaw: number; speed: number };
+export type Vehicle = { id: number; x: number; z: number; yaw: number; speed: number; botDriver: number | null };
 export type Chest = { id: number; x: number; z: number; y: number; rot: number; opened: boolean };
 
 const A = ["Jonesy", "Peely", "Fishstick", "Midas", "Raven", "Drift", "Ramirez", "Banshee", "Lynx", "Meowscles", "Brutus", "Skye", "Ruckus", "Aura", "Crystal", "Calamity"];
@@ -95,7 +98,7 @@ export function initRun() {
   runtime.altitude = BUS_ALT;
   runtime.chests = CHEST_SPOTS.map((c, i) => ({ id: i, x: c.x, z: c.z, y: c.y, rot: c.rot, opened: false }));
   runtime.chestVersion++;
-  runtime.vehicles = VEHICLE_SPOTS.map((v, i) => ({ id: i, x: v.x, z: v.z, yaw: v.yaw, speed: 0 }));
+  runtime.vehicles = VEHICLE_SPOTS.map((v, i) => ({ id: i, x: v.x, z: v.z, yaw: v.yaw, speed: 0, botDriver: null }));
   runtime.driving = -1;
   runtime.ridingTrain = -1;
   runtime.aircraft = makeAircraft();
@@ -143,6 +146,9 @@ export function initRun() {
       target: -1,
       landed: false,
       landAt: jump + 14 + Math.random() * 6,
+      vehicle: null,
+      medkits: 1,
+      shieldPotions: 2,
     };
   });
 }

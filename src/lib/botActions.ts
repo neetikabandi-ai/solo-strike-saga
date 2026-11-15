@@ -7,6 +7,13 @@ export type BotConsumables = {
 
 export type BotConsumable = "med" | "shield";
 
+export const BOT_CAR_BOARD_RANGE = 18;
+export const BOT_AIRCRAFT_BOARD_RANGE = 55;
+
+export function canBotBoardVehicle(distance: number, occupied: boolean, range: number): boolean {
+  return !occupied && distance <= range;
+}
+
 export function chooseBotConsumable(needs: BotConsumables, engaged: boolean): BotConsumable | null {
   if (engaged) return null;
   if (needs.health <= 70 && needs.medkits > 0) return "med";

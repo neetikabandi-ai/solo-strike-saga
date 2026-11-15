@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyBotConsumable, chooseBotConsumable } from "./botActions";
+import { applyBotConsumable, BOT_AIRCRAFT_BOARD_RANGE, BOT_CAR_BOARD_RANGE, canBotBoardVehicle, chooseBotConsumable } from "./botActions";
 
 describe("bot consumables", () => {
   it("uses a medkit to restore a damaged bot to 150 health", () => {
@@ -26,5 +26,14 @@ describe("bot consumables", () => {
 
   it("does not consume healing items while fighting", () => {
     expect(chooseBotConsumable({ health: 20, shield: 0, medkits: 1, shieldPotions: 1 }, true)).toBeNull();
+  });
+});
+
+describe("bot vehicle access", () => {
+  it("allows nearby bots to board free cars and aircraft, but not occupied or distant ones", () => {
+    expect(canBotBoardVehicle(18, false, BOT_CAR_BOARD_RANGE)).toBe(true);
+    expect(canBotBoardVehicle(55, false, BOT_AIRCRAFT_BOARD_RANGE)).toBe(true);
+    expect(canBotBoardVehicle(18.1, false, BOT_CAR_BOARD_RANGE)).toBe(false);
+    expect(canBotBoardVehicle(5, true, BOT_CAR_BOARD_RANGE)).toBe(false);
   });
 });
