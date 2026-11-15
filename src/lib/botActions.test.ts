@@ -27,6 +27,10 @@ describe("bot consumables", () => {
   it("does not consume healing items while fighting", () => {
     expect(chooseBotConsumable({ health: 20, shield: 0, medkits: 1, shieldPotions: 1 }, true)).toBeNull();
   });
+
+  it("waits when health and shield are already healthy", () => {
+    expect(chooseBotConsumable({ health: 100, shield: 100, medkits: 1, shieldPotions: 1 }, false)).toBeNull();
+  });
 });
 
 describe("bot vehicle access", () => {

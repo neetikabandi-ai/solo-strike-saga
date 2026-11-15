@@ -25,6 +25,8 @@ export type Bot = {
   landed: boolean;
   landAt: number;
   vehicle: null | { kind: "car" | "aircraft"; id: number };
+  vehicleTime: number;
+  healCooldown: number;
   medkits: number;
   shieldPotions: number;
 };
@@ -147,6 +149,8 @@ export function initRun() {
       landed: false,
       landAt: jump + 14 + Math.random() * 6,
       vehicle: null,
+      vehicleTime: 0,
+      healCooldown: Math.random() * 3,
       medkits: 1,
       shieldPotions: 2,
     };

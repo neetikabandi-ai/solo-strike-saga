@@ -509,10 +509,10 @@ export function Player() {
     }
 
     let nearCar = -1;
-    for (const v of runtime.vehicles) if (Math.hypot(v.x - pos.x, v.z - pos.z) < 3.5) nearCar = v.id;
+    for (const v of runtime.vehicles) if (v.botDriver === null && Math.hypot(v.x - pos.x, v.z - pos.z) < 3.5) nearCar = v.id;
 
     let nearAir = -1;
-    for (const a of runtime.aircraft) if (Math.hypot(a.x - pos.x, a.z - pos.z) < (a.kind === "jet" ? 7 : 6) && Math.abs(a.y - height.current) < 3.5) nearAir = a.id;
+    for (const a of runtime.aircraft) if (a.pilotBotId === null && Math.hypot(a.x - pos.x, a.z - pos.z) < (a.kind === "jet" ? 7 : 6) && Math.abs(a.y - height.current) < 3.5) nearAir = a.id;
     let nearRide = -1;
     if (height.current < 2) for (const v of runtime.transit) if (Math.hypot(v.x - pos.x, v.z - pos.z) < (v.kind === "bus" ? 6 : 4)) nearRide = v.id;
 
