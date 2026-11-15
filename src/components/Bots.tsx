@@ -2,13 +2,34 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { addTracer, hurtBot, runtime, type Bot } from "../lib/runtime";
-import { MAP_HALF, moveWithCollision, rayBlocked } from "../lib/world";
+import { clampMap, collides, findFree, groundAt, MAP_HALF, moveWithCollision, rayBlocked } from "../lib/world";
+import { applyBotConsumable, BOT_AIRCRAFT_BOARD_RANGE, BOT_CAR_BOARD_RANGE, canBotBoardVehicle, chooseBotConsumable } from "../lib/botActions";
 import { useGameStore } from "../store/useGameStore";
 import { Soldier, type SoldierClip } from "./Soldier";
 
 const SIGHT = 55;
 const FIRE_RANGE = 48;
 const BOT_SPEED = 4.2;
+
+function releaseBotVehicle(bot: Bot) {
+  if (!bot.vehicle) return;
+  if (bot.vehicle.kind === "aircraft") {
+    const aircraft = runtime.aircraft[bot.vehicle.id];
+    if (aircraft?.pilotBotId === bot.id) aircraft.pilotBotId = null;
+  } else {
+    const vehicle = runtime.vehicles[bot.vehicle.id];
+    if (vehicle?.botDriver === bot.id) vehicle.botDriver = null;
+  }
+  bot.vehicle = null;
+  bot.vehicleTime = 0;
+}
+
+function turnToward(current: number, target: number, maxTurn: number, dt: number) {
+  let diff = target - current;
+  while (diff > Math.PI) diff -= Math.PI * 2;
+  while (diff < -Math.PI) diff += Math.PI * 2;
+  return current + THREE.MathUtils.clamp(diff, -maxTurn * dt, maxTurn * dt);
+}
 
 const DIR = new THREE.Vector3();
 const EYE = new THREE.Vector3();
@@ -36,12 +57,14 @@ export function Bots() {
 
     for (const bot of runtime.bots) {
       if (!bot.alive) {
+        releaseBotVehicle(bot);
         bot.dying += dt;
         continue;
       }
       aliveBots++;
+      if (!bot.landed && runtime.clock >= bot.landAt) bot.landed = true;
 
-      EYE.set(bot.pos.x, 1.5, bot.pos.z);
+      EYE.set(bot.pos.x, bot.pos.y + 1.5, bot.pos.z);
 
       // --- choose an enemy: the player, or another bot ---------------
       const toPlayer = Math.hypot(player.x - bot.pos.x, player.z - bot.pos.z);
@@ -63,7 +86,7 @@ export function Bots() {
           if (other === bot || !other.alive) continue;
           const d = Math.hypot(other.pos.x - bot.pos.x, other.pos.z - bot.pos.z);
           if (d < SIGHT && d < best) {
-            TARGET.set(other.pos.x, 1.4, other.pos.z);
+            TARGET.set(other.pos.x, other.pos.y + 1.4, other.pos.z);
             RAY.copy(TARGET).sub(EYE).normalize();
             if (!rayBlocked(EYE, RAY, d - 0.6)) {
               best = d;
@@ -80,7 +103,7 @@ export function Bots() {
       let foeZ = 0;
       if (foe) {
         foeDist = Math.hypot(foe.pos.x - bot.pos.x, foe.pos.z - bot.pos.z);
-        TARGET.set(foe.pos.x, 1.4, foe.pos.z);
+        TARGET.set(foe.pos.x, foe.pos.y + 1.4, foe.pos.z);
         RAY.copy(TARGET).sub(EYE);
         RAY.normalize();
         if (foeDist >= SIGHT || rayBlocked(EYE, RAY, foeDist - 0.6)) {
@@ -110,8 +133,28 @@ export function Bots() {
       const mustRotate = zoneDist > store.zoneRadius * 0.75 - 15;
       const lowHp = bot.health < 60 && bot.shield <= 0;
       if (outside) bot.repath = Math.min(bot.repath, 0.3);
-      // heal up when out of combat
-      if (!engaged && bot.shield < 100) bot.shield = Math.min(100, bot.shield + 4 * dt);
+      bot.healCooldown = Math.max(0, bot.healCooldown - dt);
+      if (bot.healCooldown <= 0) {
+        const consumable = chooseBotConsumable({
+          health: bot.health,
+          shield: bot.shield,
+          medkits: bot.medkits,
+          shieldPotions: bot.shieldPotions,
+        }, engaged);
+        if (consumable) {
+          const healed = applyBotConsumable({
+            health: bot.health,
+            shield: bot.shield,
+            medkits: bot.medkits,
+            shieldPotions: bot.shieldPotions,
+          }, consumable);
+          bot.health = healed.health;
+          bot.shield = healed.shield;
+          bot.medkits = healed.medkits;
+          bot.shieldPotions = healed.shieldPotions;
+          bot.healCooldown = consumable === "med" ? 4 : 2;
+        }
+      }
 
       if (bot.repath <= 0) {
         bot.repath = 1.4 + Math.random() * 1.6;
@@ -148,16 +191,133 @@ export function Bots() {
 
       DIR.set(bot.dest.x - bot.pos.x, 0, bot.dest.z - bot.pos.z);
       const destDist = DIR.length();
-      bot.moving = destDist > 1.2;
-      if (bot.moving) {
+      bot.moving = !!bot.vehicle || destDist > 1.2;
+      if (bot.vehicle?.kind === "aircraft") {
+        const aircraft = runtime.aircraft[bot.vehicle.id];
+        if (!aircraft || aircraft.pilotBotId !== bot.id) {
+          bot.vehicle = null;
+          bot.vehicleTime = 0;
+        } else {
+          bot.vehicleTime -= dt;
+          const returning = bot.vehicleTime <= 0;
+          const targetX = returning ? aircraft.home.x : bot.dest.x;
+          const targetZ = returning ? aircraft.home.z : bot.dest.z;
+          const targetAltitude = returning
+            ? aircraft.kind === "jet"
+              ? aircraft.home.y
+              : groundAt(aircraft.home.x, aircraft.home.z, aircraft.home.y + 2, 1)
+            : aircraft.kind === "jet"
+              ? 65
+              : THREE.MathUtils.clamp(aircraft.home.y, 45, 85);
+          const dx = targetX - aircraft.x;
+          const dz = targetZ - aircraft.z;
+          const distance = Math.hypot(dx, dz);
+          const targetYaw = Math.atan2(-dx, -dz);
+          aircraft.yaw = turnToward(aircraft.yaw, targetYaw, aircraft.kind === "jet" ? 0.45 : 0.85, dt);
+          const cruiseSpeed = aircraft.kind === "jet" ? 78 : 25;
+          const speedTarget = returning ? Math.min(cruiseSpeed, Math.max(12, distance * 0.65)) : cruiseSpeed;
+          aircraft.speed += (speedTarget - aircraft.speed) * (1 - Math.exp(-1.8 * dt));
+          aircraft.x = clampMap(aircraft.x - Math.sin(aircraft.yaw) * aircraft.speed * dt);
+          aircraft.z = clampMap(aircraft.z - Math.cos(aircraft.yaw) * aircraft.speed * dt);
+          const altitudeDelta = targetAltitude - aircraft.y;
+          const climbRate = aircraft.kind === "jet" ? 11 : 8;
+          aircraft.y += THREE.MathUtils.clamp(altitudeDelta, -climbRate * dt, climbRate * dt);
+          aircraft.pitch = THREE.MathUtils.clamp(altitudeDelta * 0.025, -0.45, 0.45);
+          bot.pos.set(aircraft.x, aircraft.y, aircraft.z);
+          bot.yaw = aircraft.yaw;
+          if (returning && distance < 22 && Math.abs(aircraft.y - targetAltitude) < 4) {
+            const spot = findFree(aircraft.x, aircraft.z, 0.8);
+            releaseBotVehicle(bot);
+            bot.pos.set(spot.x, targetAltitude, spot.z);
+            bot.repath = 0;
+          }
+        }
+      } else if (bot.vehicle?.kind === "car") {
+        const vehicle = runtime.vehicles[bot.vehicle.id];
+        if (!vehicle || vehicle.botDriver !== bot.id) {
+          bot.vehicle = null;
+          bot.vehicleTime = 0;
+        } else {
+          bot.vehicleTime -= dt;
+          const dx = bot.dest.x - vehicle.x;
+          const dz = bot.dest.z - vehicle.z;
+          const distance = Math.hypot(dx, dz);
+          const targetYaw = Math.atan2(-dx, -dz);
+          vehicle.yaw = turnToward(vehicle.yaw, targetYaw, 1.4, dt);
+          vehicle.speed += (16 - vehicle.speed) * (1 - Math.exp(-1.4 * dt));
+          const nx = clampMap(vehicle.x - Math.sin(vehicle.yaw) * vehicle.speed * dt);
+          const nz = clampMap(vehicle.z - Math.cos(vehicle.yaw) * vehicle.speed * dt);
+          if (!collides(nx, nz, 1.5, 0)) {
+            vehicle.x = nx;
+            vehicle.z = nz;
+          } else {
+            vehicle.yaw += (bot.id % 2 === 0 ? 1 : -1) * 0.8;
+            vehicle.speed *= 0.55;
+          }
+          bot.pos.set(vehicle.x, 0, vehicle.z);
+          bot.yaw = vehicle.yaw;
+          if (bot.vehicleTime <= 0) {
+            const spot = findFree(vehicle.x + Math.cos(vehicle.yaw) * 3, vehicle.z - Math.sin(vehicle.yaw) * 3, 0.8);
+            releaseBotVehicle(bot);
+            vehicle.speed = 0;
+            bot.pos.set(spot.x, 0, spot.z);
+            bot.repath = 0;
+          }
+        }
+      } else if (bot.moving) {
         DIR.normalize();
         const sp = outside ? BOT_SPEED * 1.7 : mustRotate || lowHp ? BOT_SPEED * 1.4 : BOT_SPEED;
         const bx = bot.pos.x, bz = bot.pos.z;
-        moveWithCollision(bot.pos, DIR.x * sp * dt, DIR.z * sp * dt, 0.55);
+        moveWithCollision(bot.pos, DIR.x * sp * dt, DIR.z * sp * dt, 0.55, bot.pos.y);
         // stuck on a wall? slide sideways
         if (Math.hypot(bot.pos.x - bx, bot.pos.z - bz) < sp * dt * 0.2) {
           const side = bot.id % 2 ? 1 : -1;
           moveWithCollision(bot.pos, -DIR.z * side * sp * dt, DIR.x * side * sp * dt, 0.55);
+        }
+      }
+
+      if (!bot.vehicle && !engaged && !outside && bot.landed) {
+        let boardedAircraft = -1;
+        let boardedCar = -1;
+        let nearestDistance = Infinity;
+        for (const aircraft of runtime.aircraft) {
+          if (aircraft.pilotBotId !== null || runtime.piloting === aircraft.id) continue;
+          const d = Math.hypot(aircraft.x - bot.pos.x, aircraft.z - bot.pos.z);
+          const range = aircraft.kind === "jet" ? BOT_CAR_BOARD_RANGE : BOT_AIRCRAFT_BOARD_RANGE;
+          if (canBotBoardVehicle(d, false, range) && d < nearestDistance) {
+            nearestDistance = d;
+            boardedAircraft = aircraft.id;
+            boardedCar = -1;
+          }
+        }
+        for (const vehicle of runtime.vehicles) {
+          if (vehicle.botDriver !== null || runtime.driving === vehicle.id) continue;
+          const d = Math.hypot(vehicle.x - bot.pos.x, vehicle.z - bot.pos.z);
+          if (canBotBoardVehicle(d, false, BOT_CAR_BOARD_RANGE) && d < nearestDistance) {
+            nearestDistance = d;
+            boardedCar = vehicle.id;
+            boardedAircraft = -1;
+          }
+        }
+        if (boardedAircraft >= 0) {
+          const aircraft = runtime.aircraft[boardedAircraft];
+          if (aircraft) {
+            bot.vehicle = { kind: "aircraft", id: aircraft.id };
+            bot.vehicleTime = 12 + Math.random() * 16;
+            aircraft.pilotBotId = bot.id;
+            aircraft.speed = Math.max(aircraft.speed, aircraft.kind === "jet" ? 18 : 0);
+            bot.pos.set(aircraft.x, aircraft.y, aircraft.z);
+            bot.yaw = aircraft.yaw;
+          }
+        } else if (boardedCar >= 0) {
+          const vehicle = runtime.vehicles[boardedCar];
+          if (vehicle) {
+            bot.vehicle = { kind: "car", id: vehicle.id };
+            bot.vehicleTime = 12 + Math.random() * 18;
+            vehicle.botDriver = bot.id;
+            bot.pos.set(vehicle.x, 0, vehicle.z);
+            bot.yaw = vehicle.yaw;
+          }
         }
       }
 
@@ -232,9 +392,9 @@ function BotView({ bot }: { bot: Bot }) {
 
   useFrame(() => {
     if (!group.current) return;
-    group.current.position.set(bot.pos.x, 0, bot.pos.z);
+    group.current.position.set(bot.pos.x, bot.pos.y, bot.pos.z);
     group.current.rotation.y = bot.yaw;
-    group.current.visible = bot.alive || bot.dying < 6;
+    group.current.visible = !bot.vehicle && (bot.alive || bot.dying < 6);
     const next: SoldierClip = !bot.alive
       ? "die"
       : bot.moving

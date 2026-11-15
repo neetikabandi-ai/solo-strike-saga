@@ -9,3 +9,4 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 - World collision is 3D (Box.y0 + h, spatial hash, groundAt for floors/stairs) so multi-storey buildings are walkable; why: climbable city.
+- Bot occupancy and consumable state live on runtime entities and bot records; why: AI, player controls, and rendering must share one authoritative state.
