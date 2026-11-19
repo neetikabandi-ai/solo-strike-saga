@@ -36,6 +36,7 @@ export type Blast = { x: number; y: number; z: number; life: number };
 
 export const JET_COUNT = 5;
 export const HELI_COUNT = 10;
+export const STARTING_HELICOPTER_BOTS = 3;
 export const BUS_COUNT = 20;
 export const TAXI_COUNT = 15;
 export const NUKE_RADIUS = 600;
@@ -60,6 +61,16 @@ export function makeAircraft(): Aircraft[] {
     list.push({ id: JET_COUNT + i, kind: "heli", pilotBotId: null, ...home, pitch: 0, speed: 0, home });
   });
   return list;
+}
+
+export function assignStartingHelicopters(aircraft: Aircraft[], botCount = STARTING_HELICOPTER_BOTS) {
+  return aircraft
+    .filter((a) => a.kind === "heli")
+    .slice(0, Math.max(0, botCount))
+    .map((a, botId) => {
+      a.pilotBotId = botId;
+      return { botId, aircraftId: a.id };
+    });
 }
 
 const BUS_COLORS = ["#d9a227", "#c4472f", "#2f6fb0", "#3d8b55"];

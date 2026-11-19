@@ -1,12 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { applyBotConsumable, BOT_AIRCRAFT_BOARD_RANGE, BOT_CAR_BOARD_RANGE, canBotBoardVehicle, chooseBotConsumable } from "./botActions";
+import { applyBotConsumable, assignStartingCarDrivers, BOT_AIRCRAFT_BOARD_RANGE, BOT_CAR_BOARD_RANGE, BOT_MAX_HEALTH, BOT_MAX_SHIELD, BOT_STARTING_CAR_COUNT, canBotBoardVehicle, chooseBotConsumable } from "./botActions";
 
-describe("bot consumables", () => {
-  it("uses a medkit to restore a damaged bot to 150 health", () => {
+describe("bot survivability", () => {
+  it("starts bots with 250 health and 100 shield", () => {
+    expect(BOT_MAX_HEALTH).toBe(250);
+    expect(BOT_MAX_SHIELD).toBe(100);
+  });
+
+  it("starts eight bots driving visible cars and keeps each car tied to its bot", () => {
+    const cars = Array.from({ length: 10 }, (_, id) => ({ id, botDriver: null as number | null }));
+    const assignments = assignStartingCarDrivers(cars, 3);
+
+    expect(BOT_STARTING_CAR_COUNT).toBe(8);
+    expect(assignments).toHaveLength(8);
+    expect(assignments.map(({ botId }) => botId)).toEqual([3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(cars.slice(0, 8).map((car) => car.botDriver)).toEqual([3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(cars[8]?.botDriver).toBeNull();
+  });
+
+  it("uses a medkit to restore a damaged bot to 250 health", () => {
     const needs = { health: 70, shield: 20, medkits: 1, shieldPotions: 1 };
     expect(chooseBotConsumable(needs, false)).toBe("med");
     expect(applyBotConsumable(needs, "med")).toEqual({
-      health: 150,
+      health: 250,
       shield: 20,
       medkits: 0,
       shieldPotions: 1,

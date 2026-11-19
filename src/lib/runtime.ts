@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { CHEST_SPOTS, clampMap, findFree, LOOP, POIS, TRAIN_Y, VEHICLE_SPOTS } from "./world";
-import { makeAircraft, makeTransit, type Aircraft, type Blast, type Bomb, type Transit } from "./fleet";
+import { assignStartingHelicopters, makeAircraft, makeTransit, type Aircraft, type Blast, type Bomb, type Transit } from "./fleet";
+import { assignStartingCarDrivers, BOT_MAX_HEALTH, BOT_MAX_SHIELD } from "./botActions";
 import { TOTAL_BOTS } from "../store/useGameStore";
 
 export { TRAIN_Y };
@@ -101,6 +102,7 @@ export function initRun() {
   runtime.chests = CHEST_SPOTS.map((c, i) => ({ id: i, x: c.x, z: c.z, y: c.y, rot: c.rot, opened: false }));
   runtime.chestVersion++;
   runtime.vehicles = VEHICLE_SPOTS.map((v, i) => ({ id: i, x: v.x, z: v.z, yaw: v.yaw, speed: 0, botDriver: null }));
+  const startingCarDrivers = assignStartingCarDrivers(runtime.vehicles, 3);
   runtime.driving = -1;
   runtime.ridingTrain = -1;
   runtime.aircraft = makeAircraft();
@@ -109,6 +111,7 @@ export function initRun() {
   runtime.bombs = [];
   runtime.blasts = [];
 
+  const startingHelicopters = assignStartingHelicopters(runtime.aircraft);
   runtime.bots = Array.from({ length: TOTAL_BOTS }, (_, i) => {
     const jump = b.dur * (0.08 + Math.random() * 0.85);
     busPos(jump / b.dur, TMP);
@@ -128,28 +131,43 @@ export function initRun() {
       tz = best.z + (Math.random() - 0.5) * 90;
     }
     const spot = findFree(clampMap(tx), clampMap(tz));
+    const startingAircraftId = startingHelicopters.find((assignment) => assignment.botId === i)?.aircraftId;
+    const startingAircraft = startingAircraftId === undefined
+      ? undefined
+      : runtime.aircraft.find((aircraft) => aircraft.id === startingAircraftId);
+    const startingCarId = startingCarDrivers.find((assignment) => assignment.botId === i)?.vehicleId;
+    const startingCar = startingCarId === undefined
+      ? undefined
+      : runtime.vehicles.find((vehicle) => vehicle.id === startingCarId);
+    const spawnX = startingAircraft?.x ?? startingCar?.x ?? spot.x;
+    const spawnY = startingAircraft?.y ?? 0;
+    const spawnZ = startingAircraft?.z ?? startingCar?.z ?? spot.z;
     const name = `${B[Math.floor(Math.random() * B.length)]}${A[i % A.length]}${Math.floor(Math.random() * 99)}`;
     return {
       id: i,
       name,
-      pos: new THREE.Vector3(spot.x, 0, spot.z),
+      pos: new THREE.Vector3(spawnX, spawnY, spawnZ),
       yaw: Math.random() * Math.PI * 2,
-      health: 150,
-      shield: Math.random() < 0.6 ? 50 : 0,
+      health: BOT_MAX_HEALTH,
+      shield: BOT_MAX_SHIELD,
       alive: true,
       dying: 0,
       fireCd: 1 + Math.random() * 2,
       burst: 0,
       repath: 0,
       scan: Math.random(),
-      dest: new THREE.Vector3(spot.x, 0, spot.z),
+      dest: new THREE.Vector3(spawnX, spawnY, spawnZ),
       moving: false,
       aware: false,
       target: -1,
-      landed: false,
-      landAt: jump + 14 + Math.random() * 6,
-      vehicle: null,
-      vehicleTime: 0,
+      landed: !!startingAircraft || !!startingCar,
+      landAt: startingAircraft || startingCar ? 0 : jump + 14 + Math.random() * 6,
+      vehicle: startingAircraft
+        ? { kind: "aircraft", id: startingAircraft.id }
+        : startingCar
+          ? { kind: "car", id: startingCar.id }
+          : null,
+      vehicleTime: startingAircraft || startingCar ? 12 + Math.random() * 16 : 0,
       healCooldown: Math.random() * 3,
       medkits: 1,
       shieldPotions: 2,

@@ -1,3 +1,4 @@
-- [ ] Let bots board and operate aircraft and cars while staying synchronized with shared vehicle state.
-- [ ] Give bots shield potions and medkits, with safe combat-aware use.
-- [ ] Test bot healing rules and verify the match preview remains healthy.
+- [x] Let bots board and operate aircraft and cars while staying synchronized with shared vehicle state.
+- [x] Give bots shield potions and medkits, with safe combat-aware use.
+- [x] Start three bots in helicopters and eight in cars; raise bot durability to 250 health and 100 shield.
+- [ ] Verify bot vehicle activity in the running match preview.
