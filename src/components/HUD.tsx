@@ -172,7 +172,7 @@ export function HUD() {
             <li>Mouse look · Left click fire · Right click aim · R reload</li>
             <li>1-3 weapons · 4 shield potion · 5 medkit · F open chest</li>
             <li>E enter/exit car or train · Yellow pads launch you into the sky</li>
-            <li>E fly aircraft · Jet: W/S throttle, A/D turn · Helicopter: WASD, Shift/C altitude · Space drop nuke</li>
+            <li>E fly aircraft · Jet: W/S throttle, A/D turn, Shift afterburner (Mach 1+) · Helicopter: WASD, Shift/C altitude · Space drop nuke</li>
             <li>M teleport menu · Ride the maglev train roof</li>
           </ul>
           <button

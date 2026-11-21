@@ -5,7 +5,7 @@ import { keys, look, mouse, pressed } from "../lib/input";
 import { addTracer, BUS_ALT, busPos, carUnder, hurtBot, runtime, trainCars, TRAIN_ROOF, TRAIN_Y, updateTrain, type Chest } from "../lib/runtime";
 import { clampMap, collides, findFree, groundAt, PADS, moveWithCollision, rayBlocked, raySphere } from "../lib/world";
 import { chestLoot, RARITY, WEAPONS } from "../lib/weapons";
-import { NUKE_COOLDOWN, NUKE_RADIUS, updateTransit } from "../lib/fleet";
+import { NUKE_COOLDOWN, NUKE_RADIUS, SPEED_OF_SOUND, updateJetSpeed, updateTransit } from "../lib/fleet";
 import { STORM_DPS, useGameStore } from "../store/useGameStore";
 
 const WALK = 6;
@@ -265,15 +265,14 @@ export function Player() {
       a.yaw = look.yaw;
       a.pitch = THREE.MathUtils.clamp(look.pitch, -0.9, 0.9);
       if (jet) {
-        const max = k.has("ShiftLeft") ? 110 : 75;
-        if (fwd > 0) a.speed = Math.min(max, a.speed + 25 * dt);
-        else if (fwd < 0) a.speed = Math.max(0, a.speed - 30 * dt);
+        const afterburner = k.has("ShiftLeft");
+        a.speed = updateJetSpeed(a.speed, fwd, afterburner, dt);
         a.yaw -= strafe * 0.9 * dt;
         look.yaw = a.yaw;
         const lift = a.speed > 28 ? 1 : 0;
         a.x += -Math.sin(a.yaw) * Math.cos(a.pitch) * a.speed * dt;
         a.z += -Math.cos(a.yaw) * Math.cos(a.pitch) * a.speed * dt;
-        a.y += (lift ? Math.sin(a.pitch) * a.speed : -6) * dt;
+        a.y += (lift ? Math.sin(a.pitch) * Math.min(a.speed, 90) : -6) * dt;
       } else {
         const sp = 32;
         MOVE.set(0, 0, 0).addScaledVector(FORWARD, fwd).addScaledVector(RIGHT, strafe);
@@ -294,9 +293,9 @@ export function Player() {
       const back = jet ? 22 : 16;
       cam.position.set(a.x - AIM.x * back, a.y + (jet ? 6 : 5) - AIM.y * back, a.z - AIM.z * back);
       cam.lookAt(a.x + AIM.x * 10, a.y + 2 + AIM.y * 10, a.z + AIM.z * 10);
-      setFov(80 + a.speed * 0.12);
+      setFov(80 + Math.min(a.speed, 220) * 0.12);
       const pr = jet
-        ? "W/S throttle · A/D turn · mouse pitch · Shift boost · SPACE drop nuke · E eject"
+        ? `W/S throttle · A/D turn · mouse pitch · Shift afterburner${a.speed >= SPEED_OF_SOUND ? " · SUPERSONIC" : ""} · SPACE drop nuke · E eject`
         : "W/S forward · A/D strafe · mouse turn · Shift rise · C descend · SPACE drop nuke · E eject";
       if (store.prompt !== pr) set({ prompt: pr });
       if (pressed.has("Space") && runtime.nukeCd <= 0) {

@@ -1,4 +1,5 @@
 - [x] Let bots board and operate aircraft and cars while staying synchronized with shared vehicle state.
 - [x] Give bots shield potions and medkits, with safe combat-aware use.
 - [x] Start three bots in helicopters and eight in cars; raise bot durability to 250 health and 100 shield.
-- [ ] Verify bot vehicle activity in the running match preview.
+- [x] Add a supersonic jet afterburner with in-flight status feedback; keep helicopters at rotorcraft speeds.
+- [ ] Verify supersonic jet flight in the running match preview.

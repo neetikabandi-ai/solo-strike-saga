@@ -39,8 +39,21 @@ export const HELI_COUNT = 10;
 export const STARTING_HELICOPTER_BOTS = 3;
 export const BUS_COUNT = 20;
 export const TAXI_COUNT = 15;
+export const SPEED_OF_SOUND = 343;
+export const JET_CRUISE_SPEED = 75;
+export const JET_AFTERBURNER_SPEED = 420;
 export const NUKE_RADIUS = 600;
 export const NUKE_COOLDOWN = 0.6;
+
+export function updateJetSpeed(speed: number, throttle: number, afterburner: boolean, dt: number) {
+  if (throttle > 0) {
+    const max = afterburner ? JET_AFTERBURNER_SPEED : JET_CRUISE_SPEED;
+    const acceleration = afterburner ? 100 : 25;
+    return Math.min(max, speed + acceleration * dt);
+  }
+  if (throttle < 0) return Math.max(0, speed - 30 * dt);
+  return speed * Math.exp(-0.12 * dt);
+}
 
 const JET_SPOTS = [
   [520, -500],
